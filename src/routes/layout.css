@@ -1,0 +1,34 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+
+@import '@skeletonlabs/skeleton';
+@import '@skeletonlabs/skeleton-svelte';
+
+@theme {
+	/* Amarelo Aliança - cor de destaque #daab4f */
+	--color-primary-50: #fdf9ef;
+	--color-primary-100: #faf0d9;
+	--color-primary-200: #f4deb3;
+	--color-primary-300: #ecc983;
+	--color-primary-400: #e3b45c;
+	--color-primary-500: #daab4f;
+	--color-primary-600: #c4923a;
+	--color-primary-700: #a37430;
+	--color-primary-800: #855d2c;
+	--color-primary-900: #6e4d28;
+	--color-primary-950: #3d2813;
+
+	/* Azul Aliança - fundo #001c2a */
+	--color-surface-50: #e6eef2;
+	--color-surface-100: #c2d4de;
+	--color-surface-200: #9ab8c8;
+	--color-surface-300: #6d97ad;
+	--color-surface-400: #4a7791;
+	--color-surface-500: #2a5a75;
+	--color-surface-600: #1e4861;
+	--color-surface-700: #14374d;
+	--color-surface-800: #0a2639;
+	--color-surface-900: #001c2a;
+	--color-surface-950: #00121c;
+}
