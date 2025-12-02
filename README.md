@@ -1,6 +1,8 @@
 # Presença Aliança
 
-Sistema de controle de presença em eventos com confirmação via link e integração com Google Meet.
+Sistema para confirmação de presença em eventos online — gera links públicos para que participantes confirmem presença, integra-se com Google Meet e oferece um painel administrativo com gerenciamento de eventos, categorias, usuários e relatórios (exportação XLSX e opções de impressão).
+
+Funcionalidades principais: confirmação por link público, painel administrativo, relatórios e integração com Google Meet.
 
 ## Stack
 
