@@ -85,6 +85,34 @@
 		}).format(new Date(date));
 	}
 
+	// Formata um intervalo de data/hora no formato:
+	// "terça-feira, 2 de dezembro de 2025 às 09:00 - 12:00"
+	function formatDateRange(start: Date | string, end: Date | string) {
+		const s = new Date(start);
+		const e = new Date(end);
+
+		const day = new Intl.DateTimeFormat('pt-BR', {
+			weekday: 'long',
+			day: '2-digit',
+			month: 'long',
+			year: 'numeric'
+		}).format(s);
+
+		const startTime = new Intl.DateTimeFormat('pt-BR', {
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: false
+		}).format(s);
+
+		const endTime = new Intl.DateTimeFormat('pt-BR', {
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: false
+		}).format(e);
+
+		return `${day} às ${startTime} - ${endTime}`;
+	}
+
 	function formatTime(date: Date) {
 		return new Intl.DateTimeFormat('pt-BR', {
 			timeStyle: 'short'
@@ -122,7 +150,7 @@
 		<header class="report-header">
 			<h1 class="report-title">RELATÓRIO DE PRESENÇA</h1>
 			<h2 class="event-name">{event.name}</h2>
-			<p class="event-date">{formatDate(event.dateTime)} - {formatTime(event.endTime)}</p>
+			<p class="event-date">{formatDateRange(event.dateTime, event.endTime)}</p>
 			{#if categories.length > 0}
 				<div class="categories-row">
 					{#each categories as category}
