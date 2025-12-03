@@ -60,6 +60,8 @@
 	let attendanceChartInstance: any = null;
 	let categoryChartInstance: any = null;
 	let monthlyChartInstance: any = null;
+	// Whether charts have been initialized (avoid loading chart.js on initial page load)
+	let chartsInitialized = $state(false);
 
 	// Generic sort function
 	function sortData<T>(items: T[], column: keyof T, direction: 'asc' | 'desc'): T[] {
@@ -385,15 +387,35 @@
 	}
 
 	onMount(() => {
-		initCharts();
-	});
+		// Lazy-initialize charts during idle time so the page isn't blocked by the chart.js import
+		const initIfNeeded = () => {
+			if (!chartsInitialized) {
+				chartsInitialized = true;
+				initCharts();
+			}
+		};
 
-	// Re-init charts when data changes
-	$effect(() => {
-		if (data) {
-			initCharts();
+		if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+			(window as any).requestIdleCallback(initIfNeeded, { timeout: 2000 });
+		} else {
+			// Fallback after a short delay
+			setTimeout(initIfNeeded, 800);
 		}
 	});
+
+	// Re-init charts when data changes only if charts were initialized
+	$effect(() => {
+	 	if (data && chartsInitialized) {
+	 		initCharts();
+	 	}
+	});
+
+	// Ensure charts are initialized (lazy) — call this before printing or when needed
+	async function ensureChartsInitialized() {
+	 	if (chartsInitialized) return;
+	 	chartsInitialized = true;
+	 	await initCharts();
+	}
 
 	async function exportToXLSX() {
 		const XLSX = await import('xlsx');
@@ -453,7 +475,11 @@
 		return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 	}
 
-	function handlePrint() {
+	async function handlePrint() {
+	 	// Make sure charts are ready (imports + render) before opening print dialog
+	 	await ensureChartsInitialized();
+		// Wait a microtask to ensure canvas reflow/render
+		await Promise.resolve();
 		window.print();
 	}
 </script>
