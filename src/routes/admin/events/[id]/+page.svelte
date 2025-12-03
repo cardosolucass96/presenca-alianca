@@ -1,12 +1,42 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Calendar, Pencil } from 'lucide-svelte';
+	import { Calendar, Pencil, FileText } from 'lucide-svelte';
 	import { Alert, AdminPage, EmptyState } from '$lib';
 	import { formatDate } from '$lib/utils/formatters';
+	import EventReportPrint from '$lib/components/reports/EventReportPrint.svelte';
 
 	let { data, form } = $props();
 
 	let isEditing = $state(false);
+	let showReport = $state(false);
+
+	// Normalizar categorias (suporta ambos formatos possíveis)
+	function normalizeCategories() {
+		return data.categories.map((c: any) => ({
+			id: c.id ?? c.category?.id,
+			name: c.name ?? c.category?.name,
+			color: c.color ?? c.category?.color
+		}));
+	}
+
+	// Normalizar attendees (suporta ambos formatos possíveis)
+	function normalizeAttendees() {
+		return data.attendees.map((a: any) => ({
+			user: {
+				id: a.user.id,
+				username: a.user.username,
+				email: a.user.email,
+				companyName: a.user.companyName
+			},
+			attendance: {
+				confirmedAt: a.attendance.confirmedAt
+			},
+			productName: a.productName ?? a.product?.name ?? null
+		}));
+	}
+
+	const normalizedCategories = $derived(normalizeCategories());
+	const normalizedAttendees = $derived(normalizeAttendees());
 	
 	// Form state
 	let editName = $state(data.event.name);
@@ -16,7 +46,7 @@
 	let editEndTime = $state(formatInputTime(data.event.endTime));
 	let editMeetLink = $state(data.event.meetLink);
 	let editExpectedAttendees = $state(data.event.expectedAttendees);
-	let editCategoryIds = $state<string[]>(data.categories.map(c => c.id));
+	let editCategoryIds = $state<string[]>(normalizeCategories().map((c: { id: string }) => c.id));
 
 	function formatInputDate(date: Date) {
 		const d = new Date(date);
@@ -58,7 +88,7 @@
 		editEndTime = formatInputTime(data.event.endTime);
 		editMeetLink = data.event.meetLink;
 		editExpectedAttendees = data.event.expectedAttendees;
-		editCategoryIds = data.categories.map(c => c.id);
+		editCategoryIds = normalizeCategories().map((c: { id: string }) => c.id);
 		isEditing = true;
 	}
 
@@ -243,6 +273,14 @@
 								<span class="badge preset-filled-warning-500">Inativo</span>
 							{/if}
 							<button
+								class="btn btn-sm preset-outlined-primary-500"
+								onclick={() => showReport = true}
+								title="Gerar relatório PDF"
+							>
+								<FileText class="w-4 h-4" />
+								PDF
+							</button>
+							<button
 								class="btn btn-sm preset-filled-primary-500"
 								onclick={startEdit}
 							>
@@ -261,11 +299,11 @@
 							<span class="text-surface-500">Data e Horário:</span>
 							<p class="font-medium">{formatFullDate(data.event.dateTime)} - {formatTime(data.event.endTime)}</p>
 						</div>
-						{#if data.categories && data.categories.length > 0}
+						{#if normalizedCategories && normalizedCategories.length > 0}
 							<div>
 								<span class="text-surface-500">Categorias:</span>
 								<div class="flex flex-wrap gap-1 mt-1">
-									{#each data.categories as category}
+									{#each normalizedCategories as category}
 										<span
 											class="badge text-white text-xs"
 											style="background-color: {category.color}"
@@ -302,7 +340,7 @@
 					Participantes ({data.attendeesCount} / {data.event.expectedAttendees})
 				</h2>
 
-				{#if data.attendees.length === 0}
+				{#if normalizedAttendees.length === 0}
 					<p class="text-surface-600-400 text-center py-8">
 						Nenhum participante confirmado ainda.
 					</p>
@@ -319,7 +357,7 @@
 								</tr>
 							</thead>
 							<tbody>
-								{#each data.attendees as { user, attendance, productName }}
+								{#each normalizedAttendees as { user, attendance, productName }}
 									<tr>
 										<td>{user.username}</td>
 										<td>{user.companyName}</td>
@@ -397,3 +435,13 @@
 		</div>
 	</div>
 </AdminPage>
+
+<!-- Modal de Relatório para Impressão -->
+{#if showReport}
+	<EventReportPrint
+		event={data.event}
+		categories={normalizedCategories}
+		attendees={normalizedAttendees}
+		onClose={() => showReport = false}
+	/>
+{/if}
