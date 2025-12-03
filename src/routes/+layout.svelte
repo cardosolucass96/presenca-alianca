@@ -4,18 +4,20 @@
 	import { resolveRoute } from '$app/paths';
 	import { LogOut, Settings, User, Shield } from 'lucide-svelte';
     import { onMount } from 'svelte';
-    import { browser, dev } from '$app/environment';
-    import { PUBLIC_CLARITY_ID } from '$env/static/public';
+	import { browser, dev } from '$app/environment';
+	import { env } from '$env/dynamic/public';
 
 	let { children, data } = $props();
 
 	// Clarity opt-out state (persisted in localStorage)
-	let clarityOptedOut = false;
-	let clarityLoaded = false;
+	let clarityOptedOut = $state(false);
+	let clarityLoaded = $state(false);
+	// consent status for anonymous visitors: 'accepted' | 'rejected' | null
+	let clarityConsent: string | null = $state(null);
 
 	// Use the provided PUBLIC_CLARITY_ID or fallback to the id the user gave.
 	// Best practice: set PUBLIC_CLARITY_ID in environment/Cloudflare Pages settings; fallback ensures immediate enablement if you provided the ID.
-	const CLARITY_ID = PUBLIC_CLARITY_ID ?? 'ufs6xma0e5';
+	const CLARITY_ID = env.PUBLIC_CLARITY_ID ?? 'ufs6xma0e5';
 
 	const homeHref = resolveRoute('/');
 	const adminHref = resolveRoute('/admin');
@@ -60,8 +62,20 @@
 			clarityOptedOut = false;
 		}
 
-		if (shouldLoadClarity()) {
-			loadClarity(CLARITY_ID);
+		// For logged-in users we rely on shouldLoadClarity
+		if (data?.user) {
+			if (shouldLoadClarity()) loadClarity(CLARITY_ID);
+		} else {
+			// anonymous visitor: use consent value
+			try {
+				clarityConsent = localStorage.getItem('clarity_consent');
+			} catch (e) {
+				clarityConsent = null;
+			}
+
+			if (clarityConsent === 'accepted' && shouldLoadClarity()) {
+				loadClarity(CLARITY_ID);
+			}
 		}
 	});
 
@@ -81,6 +95,22 @@
 			// If opted out, reload to ensure we don't send events
 			location.reload();
 		}
+	}
+
+	// Accept/Reject handlers for anonymous consent banner
+	function acceptClarity() {
+		clarityConsent = 'accepted';
+		try {
+			localStorage.setItem('clarity_consent', 'accepted');
+		} catch (e) {}
+		if (shouldLoadClarity()) loadClarity(CLARITY_ID);
+	}
+
+	function rejectClarity() {
+		clarityConsent = 'rejected';
+		try {
+			localStorage.setItem('clarity_consent', 'rejected');
+		} catch (e) {}
 	}
 </script>
 
@@ -136,6 +166,19 @@
 						Entrar
 					</a>
 				{/if}
+
+					<!-- Consent banner for anonymous visitors -->
+					{#if !data.user && clarityConsent === null && browser && !dev}
+						<div class="fixed inset-x-4 bottom-4 z-50 flex items-center justify-between gap-4 p-3 bg-white border rounded-lg shadow-lg max-w-3xl mx-auto">
+							<div class="text-sm text-surface-700">
+								Usamos ferramentas de análise (Microsoft Clarity) para melhorar o site. Deseja ativar o rastreamento?
+							</div>
+							<div class="flex items-center gap-2">
+								<button class="btn btn-sm preset-filled-primary-500" onclick={acceptClarity}>Aceitar</button>
+								<button class="btn btn-sm preset-outlined-surface-500" onclick={rejectClarity}>Recusar</button>
+							</div>
+						</div>
+					{/if}
 			</div>
 		</nav>
 	</header>
