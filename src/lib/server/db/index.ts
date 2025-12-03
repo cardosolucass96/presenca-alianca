@@ -3,7 +3,7 @@ import { drizzle as drizzleLibSQL } from 'drizzle-orm/libsql';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import { createClient } from '@libsql/client';
-import { DATABASE_URL } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
 import * as schema from './schema';
 
@@ -21,10 +21,10 @@ export function getDatabase(platform?: App.Platform): Database {
 	// Em desenvolvimento, SEMPRE usa LibSQL local
 	if (dev) {
 		if (!_devDb) {
-			if (!DATABASE_URL) {
+			if (!env.DATABASE_URL) {
 				throw new Error('DATABASE_URL is not set for development');
 			}
-			const client = createClient({ url: DATABASE_URL });
+			const client = createClient({ url: env.DATABASE_URL });
 			_devDb = drizzleLibSQL(client, { schema });
 		}
 		return _devDb;
