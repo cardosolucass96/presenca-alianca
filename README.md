@@ -243,3 +243,27 @@ O sistema envia links de recuperação via WhatsApp (Evolution API).
 ```sh
 npm run build
 ```
+
+## Deploy (Cloudflare Pages)
+
+O deploy é feito automaticamente via GitHub Actions quando há push na branch `main`.
+
+### Configuração
+
+Para configurar o deploy, adicione os seguintes secrets no repositório GitHub:
+
+1. **CLOUDFLARE_API_TOKEN**: Token de API da Cloudflare com permissões para Cloudflare Pages
+   - Acesse: Cloudflare Dashboard → My Profile → API Tokens → Create Token
+   - Use o template "Edit Cloudflare Workers" ou crie um token customizado com permissões para Pages
+
+2. **CLOUDFLARE_ACCOUNT_ID**: ID da sua conta Cloudflare
+   - Encontre em: Cloudflare Dashboard → Workers & Pages → Overview (no canto direito da página)
+
+### Deploy Manual
+
+Para fazer deploy manualmente, execute:
+
+```sh
+npm run build
+npx wrangler pages deploy .svelte-kit/cloudflare --project-name=presenca-alianca
+```
