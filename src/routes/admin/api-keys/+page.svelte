@@ -158,6 +158,43 @@
 }`}</pre>
 			</div>
 
+			<!-- GET /api/users/:id/events -->
+			<div class="border-b border-surface-300-700 pb-4">
+				<h3 class="font-bold text-base mb-2">📆 GET /api/users/:id/events</h3>
+				<p class="mb-2 text-surface-600-400">Retorna todos os eventos que um usuário participou:</p>
+				<code class="bg-surface-200-800 px-3 py-2 rounded block mt-1">
+					GET /api/users/user123abc/events
+				</code>
+				<p class="mt-2 text-surface-600-400">Resposta (200):</p>
+				<pre class="bg-surface-200-800 px-3 py-2 rounded overflow-x-auto mt-1">{`{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "user123abc",
+      "username": "João Silva",
+      "email": "joao@email.com",
+      "companyName": "Empresa XYZ"
+    },
+    "events": [
+      {
+        "id": "evt123",
+        "name": "Reunião Mensal",
+        "slug": "reuniao-mensal-xyz",
+        "dateTime": "2025-12-01T14:00:00.000Z",
+        "endTime": "2025-12-01T16:00:00.000Z",
+        "meetLink": "https://meet.google.com/xxx",
+        "confirmedAt": "2025-11-15T08:00:00.000Z",
+        "attended": true,
+        "categories": [
+          { "id": "cat1", "name": "Vendas", "color": "#6366f1" }
+        ]
+      }
+    ],
+    "total": 5
+  }
+}`}</pre>
+			</div>
+
 			<!-- GET /api/events -->
 			<div class="border-b border-surface-300-700 pb-4">
 				<h3 class="font-bold text-base mb-2">📅 GET /api/events</h3>
@@ -188,6 +225,46 @@
 				<code class="bg-surface-200-800 px-3 py-2 rounded block mt-1">
 					GET /api/events?q=reuniao&isActive=true&fromDate=2025-01-01
 				</code>
+			</div>
+
+			<!-- GET /api/events/:id -->
+			<div class="border-b border-surface-300-700 pb-4">
+				<h3 class="font-bold text-base mb-2">📋 GET /api/events/:id</h3>
+				<p class="mb-2 text-surface-600-400">Retorna detalhes completos de um evento com lista de participantes:</p>
+				<code class="bg-surface-200-800 px-3 py-2 rounded block mt-1">
+					GET /api/events/evt123abc
+				</code>
+				<p class="mt-2 text-surface-600-400">Resposta (200):</p>
+				<pre class="bg-surface-200-800 px-3 py-2 rounded overflow-x-auto mt-1">{`{
+  "success": true,
+  "data": {
+    "id": "evt123abc",
+    "slug": "reuniao-mensal-xyz",
+    "name": "Reunião Mensal",
+    "description": "Descrição do evento",
+    "dateTime": "2025-12-01T14:00:00.000Z",
+    "endTime": "2025-12-01T16:00:00.000Z",
+    "meetLink": "https://meet.google.com/xxx",
+    "expectedAttendees": 50,
+    "isActive": true,
+    "createdAt": "2025-11-01T10:00:00.000Z",
+    "categories": [
+      { "id": "cat1", "name": "Vendas", "color": "#6366f1" }
+    ],
+    "attendeesCount": 25,
+    "attendees": [
+      {
+        "id": "user123",
+        "username": "João Silva",
+        "email": "joao@email.com",
+        "companyName": "Empresa XYZ",
+        "productName": "Produto A",
+        "confirmedAt": "2025-11-15T08:00:00.000Z",
+        "attended": true
+      }
+    ]
+  }
+}`}</pre>
 			</div>
 
 			<!-- POST /api/events -->
@@ -226,6 +303,7 @@
 						<tbody>
 							<tr><td class="p-2"><code>400</code></td><td class="p-2">Dados inválidos</td></tr>
 							<tr><td class="p-2"><code>401</code></td><td class="p-2">Token não fornecido ou inválido</td></tr>
+							<tr><td class="p-2"><code>404</code></td><td class="p-2">Recurso não encontrado (evento/usuário)</td></tr>
 							<tr><td class="p-2"><code>409</code></td><td class="p-2">Conflito (email/telefone duplicado)</td></tr>
 							<tr><td class="p-2"><code>500</code></td><td class="p-2">Erro interno</td></tr>
 						</tbody>
