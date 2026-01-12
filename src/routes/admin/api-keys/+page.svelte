@@ -158,12 +158,12 @@
 }`}</pre>
 			</div>
 
-			<!-- GET /api/users/:id/events -->
+			<!-- GET /api/users/:email -->
 			<div class="border-b border-surface-300-700 pb-4">
-				<h3 class="font-bold text-base mb-2">📆 GET /api/users/:id/events</h3>
-				<p class="mb-2 text-surface-600-400">Retorna todos os eventos que um usuário participou:</p>
+				<h3 class="font-bold text-base mb-2">👤 GET /api/users/:email</h3>
+				<p class="mb-2 text-surface-600-400">Retorna todos os detalhes do usuário e os eventos que ele participou:</p>
 				<code class="bg-surface-200-800 px-3 py-2 rounded block mt-1">
-					GET /api/users/user123abc/events
+					GET /api/users/joao@email.com
 				</code>
 				<p class="mt-2 text-surface-600-400">Resposta (200):</p>
 				<pre class="bg-surface-200-800 px-3 py-2 rounded overflow-x-auto mt-1">{`{
@@ -173,7 +173,11 @@
       "id": "user123abc",
       "username": "João Silva",
       "email": "joao@email.com",
-      "companyName": "Empresa XYZ"
+      "phone": "85999999999",
+      "companyName": "Empresa XYZ",
+      "productId": "prod123",
+      "role": "user",
+      "createdAt": "2025-10-01T10:00:00.000Z"
     },
     "events": [
       {
@@ -190,7 +194,7 @@
         ]
       }
     ],
-    "total": 5
+    "totalEvents": 5
   }
 }`}</pre>
 			</div>

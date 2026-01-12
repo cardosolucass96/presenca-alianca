@@ -1,9 +1,10 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import * as apiKeys from '$lib/server/apiKeys';
-import { getUserById, getUserEventsWithCategories } from '$lib/server/users';
+import { getUserByEmail } from '$lib/server/auth';
+import { getUserEventsWithCategories } from '$lib/server/users';
 
-// GET /api/users/[id]/events - Get all events a user has attended
+// GET /api/users/[email] - Get user details with all events they attended
 export const GET: RequestHandler = async ({ request, params, locals }) => {
 	// Validate Bearer token
 	const authHeader = request.headers.get('Authorization');
@@ -24,18 +25,21 @@ export const GET: RequestHandler = async ({ request, params, locals }) => {
 		);
 	}
 
-	const { id } = params;
+	const { email } = params;
 
-	if (!id) {
+	if (!email) {
 		return json(
-			{ error: 'ID do usuário é obrigatório' },
+			{ error: 'Email do usuário é obrigatório' },
 			{ status: 400 }
 		);
 	}
 
+	// Decode email (pode vir URL encoded)
+	const decodedEmail = decodeURIComponent(email).toLowerCase();
+
 	try {
-		// Verificar se o usuário existe
-		const user = await getUserById(locals.db, id);
+		// Buscar usuário pelo email
+		const user = await getUserByEmail(locals.db, decodedEmail);
 
 		if (!user) {
 			return json(
@@ -45,7 +49,7 @@ export const GET: RequestHandler = async ({ request, params, locals }) => {
 		}
 
 		// Buscar eventos que o usuário participou
-		const events = await getUserEventsWithCategories(locals.db, id);
+		const events = await getUserEventsWithCategories(locals.db, user.id);
 
 		return json({
 			success: true,
@@ -54,16 +58,20 @@ export const GET: RequestHandler = async ({ request, params, locals }) => {
 					id: user.id,
 					username: user.username,
 					email: user.email,
-					companyName: user.companyName
+					phone: user.phone,
+					companyName: user.companyName,
+					productId: user.productId,
+					role: user.role,
+					createdAt: user.createdAt
 				},
 				events,
-				total: events.length
+				totalEvents: events.length
 			}
 		});
 	} catch (e) {
-		console.error('Error fetching user events via API:', e);
+		console.error('Error fetching user by email via API:', e);
 		return json(
-			{ error: 'Erro interno ao buscar eventos do usuário' },
+			{ error: 'Erro interno ao buscar usuário' },
 			{ status: 500 }
 		);
 	}
