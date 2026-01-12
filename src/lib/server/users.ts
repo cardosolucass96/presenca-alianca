@@ -131,6 +131,53 @@ export async function getUserAttendances(db: Database, userId: string) {
 		.orderBy(desc(table.event.dateTime));
 }
 
+export async function getUserEventsWithCategories(db: Database, userId: string) {
+	const attendances = await db
+		.select({
+			eventId: table.event.id,
+			eventName: table.event.name,
+			eventSlug: table.event.slug,
+			eventDateTime: table.event.dateTime,
+			eventEndTime: table.event.endTime,
+			eventMeetLink: table.event.meetLink,
+			confirmedAt: table.attendance.confirmedAt,
+			attended: table.attendance.attended
+		})
+		.from(table.attendance)
+		.innerJoin(table.event, eq(table.attendance.eventId, table.event.id))
+		.where(eq(table.attendance.userId, userId))
+		.orderBy(desc(table.event.dateTime));
+
+	// Buscar categorias para cada evento
+	const eventsWithCategories = await Promise.all(
+		attendances.map(async (att) => {
+			const categories = await db
+				.select({
+					id: table.category.id,
+					name: table.category.name,
+					color: table.category.color
+				})
+				.from(table.eventCategory)
+				.innerJoin(table.category, eq(table.eventCategory.categoryId, table.category.id))
+				.where(eq(table.eventCategory.eventId, att.eventId));
+
+			return {
+				id: att.eventId,
+				name: att.eventName,
+				slug: att.eventSlug,
+				dateTime: att.eventDateTime,
+				endTime: att.eventEndTime,
+				meetLink: att.eventMeetLink,
+				confirmedAt: att.confirmedAt,
+				attended: att.attended,
+				categories
+			};
+		})
+	);
+
+	return eventsWithCategories;
+}
+
 export interface SearchUsersParams {
 	query?: string;
 	email?: string;
