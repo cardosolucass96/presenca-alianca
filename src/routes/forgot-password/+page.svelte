@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Phone, Send, ArrowLeft, Loader2 } from 'lucide-svelte';
+	import { Mail, Send, ArrowLeft, Loader2, KeyRound } from 'lucide-svelte';
 	import { Alert, AuthLayout } from '$lib';
 
 	let { form } = $props();
@@ -12,9 +12,9 @@
 </svelte:head>
 
 <AuthLayout 
-	icon={Phone} 
-	title="Esqueci a Senha" 
-	subtitle="Digite seu telefone para receber um link de recuperação via WhatsApp"
+	icon={KeyRound} 
+	title="Recuperar Senha" 
+	subtitle="Digite seu email ou telefone para receber um link de recuperação"
 >
 	{#if form?.success}
 		<Alert variant="success" message={form.message} class="mb-4" />
@@ -37,19 +37,22 @@
 		>
 			<label class="label mb-4">
 				<span class="mb-1 flex items-center gap-2">
-					<Phone class="w-4 h-4 text-surface-500" />
-					Telefone (WhatsApp)
+					<Mail class="w-4 h-4 text-surface-500" />
+					Email ou Telefone
 				</span>
 				<input
-					type="tel"
-					name="phone"
-					placeholder="(11) 99999-9999"
-					value={form?.phone ?? ''}
+					type="text"
+					name="identifier"
+					placeholder="seu@email.com ou +55 (85) 99999-9999"
+					value={form?.identifier ?? ''}
 					class="input"
 					required
 					disabled={loading}
 				/>
 			</label>
+			<p class="text-sm text-surface-500 mb-4">
+				Você receberá um link de recuperação por email e WhatsApp (se disponíveis).
+			</p>
 
 			<button
 				type="submit"
@@ -61,7 +64,7 @@
 					Enviando...
 				{:else}
 					<Send class="w-4 h-4" />
-					Enviar Link via WhatsApp
+					Enviar Link de Recuperação
 				{/if}
 			</button>
 		</form>

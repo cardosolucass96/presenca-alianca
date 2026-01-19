@@ -23,6 +23,11 @@ export const actions: Actions = {
 		const username = formData.get('username');
 		const companyName = formData.get('companyName');
 		const phone = formData.get('phone');
+		const positionId = formData.get('positionId');
+		const email = formData.get('email');
+		const password = formData.get('password');
+		const confirmPassword = formData.get('confirmPassword');
+		const redirectTo = formData.get('redirectTo');
 
 		// Validação de tipos
 		if (

@@ -7,3 +7,6 @@ pages_build_output_dir = ".svelte-kit/cloudflare"
 binding = "DB"
 database_name = "presenca-alianca-db"
 database_id = "50f82cda-3cd1-4f58-8672-481d605574e4"
+
+# Variáveis de ambiente (configure no Cloudflare Pages Dashboard):
+# RESEND_API_KEY = "sua_chave_resend_aqui"
