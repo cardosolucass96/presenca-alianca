@@ -117,6 +117,14 @@
 					<Alert variant="success" message="Senha atualizada com sucesso!" class="mb-6" />
 				{/if}
 
+				{#if form?.resetError}
+					<Alert variant="error" message={form.error} class="mb-6" />
+				{/if}
+
+				{#if form?.resetSuccess}
+					<Alert variant="success" message={form.resetMessage} class="mb-6" />
+				{/if}
+
 				<form method="POST" action="?/updatePassword" use:enhance class="space-y-4">
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<label class="label">
@@ -148,6 +156,22 @@
 						🔐 Alterar Senha
 					</button>
 				</form>
+
+				<div class="border-t border-surface-300-700 my-6"></div>
+
+				<div class="space-y-4">
+					<p class="text-sm text-surface-600-400">
+						Ou envie um link de redefinição de senha para o usuário:
+					</p>
+					<form method="POST" action="?/sendPasswordReset" use:enhance>
+						<button type="submit" class="btn preset-outlined-primary-500">
+							📧 Enviar Link de Redefinição
+						</button>
+					</form>
+					<p class="text-xs text-surface-500">
+						O link será enviado por WhatsApp e/ou email (se disponíveis)
+					</p>
+				</div>
 			</div>
 
 			<!-- Events Attended -->

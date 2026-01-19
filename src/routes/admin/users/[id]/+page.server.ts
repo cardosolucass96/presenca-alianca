@@ -3,6 +3,8 @@ import type { PageServerLoad, Actions } from './$types';
 import * as users from '$lib/server/users';
 import * as products from '$lib/server/products';
 import { getUserByPhone } from '$lib/server/auth';
+import { createPasswordResetToken } from '$lib/server/passwordReset';
+import { sendPasswordResetLink } from '$lib/server/whatsapp';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const result = await users.getUserWithProduct(locals.db, params.id);
@@ -101,5 +103,85 @@ export const actions: Actions = {
 		} catch {
 			return fail(500, { error: 'Erro ao atualizar senha', passwordError: true });
 		}
+	},
+
+	sendPasswordReset: async ({ params, locals, url, platform }) => {
+		// Buscar usuário
+		const result = await users.getUserWithProduct(locals.db, params.id);
+		
+		if (!result) {
+			return fail(404, { error: 'Usuário não encontrado', resetError: true });
+		}
+
+		const user = result.user;
+
+		// Criar token de reset
+		const token = await createPasswordResetToken(locals.db, user.id);
+		
+		// Gerar link de reset
+		const resetLink = `${url.origin}/reset-password/${token}`;
+		
+		let emailSent = false;
+		let whatsappSent = false;
+		const methods: string[] = [];
+
+		// Enviar via WhatsApp se tiver telefone
+		if (user.phone) {
+			const whatsappResult = await sendPasswordResetLink(user.phone, user.username, resetLink);
+			if (whatsappResult.success) {
+				whatsappSent = true;
+				methods.push('WhatsApp');
+			}
+		}
+
+		// Enviar via Email se tiver email e a plataforma tiver suporte
+		if (user.email && platform?.env?.RESEND_API_KEY) {
+			try {
+				const { Resend } = await import('resend');
+				const resend = new Resend(platform.env.RESEND_API_KEY);
+
+				await resend.emails.send({
+					from: 'Presença Aliança <noreply@presenca-alianca.com>',
+					to: user.email,
+					subject: 'Redefinição de Senha - Presença Aliança',
+					html: `
+						<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+							<h2 style="color: #333;">Olá ${user.username},</h2>
+							<p>Um administrador solicitou a redefinição da sua senha. Clique no botão abaixo para criar uma nova senha:</p>
+							<div style="margin: 30px 0; text-align: center;">
+								<a href="${resetLink}" 
+								   style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+									Redefinir Senha
+								</a>
+							</div>
+							<p style="color: #666; font-size: 14px;">
+								Este link expira em 1 hora.
+							</p>
+						</div>
+					`
+				});
+				
+				emailSent = true;
+				methods.push('email');
+			} catch (error) {
+				console.error('Error sending email:', error);
+			}
+		}
+
+		if (!emailSent && !whatsappSent) {
+			return fail(500, { 
+				error: 'Usuário não possui email ou telefone cadastrado', 
+				resetError: true 
+			});
+		}
+
+		const methodsText = methods.length > 1 
+			? methods.join(' e ') 
+			: methods[0] || 'os contatos cadastrados';
+
+		return { 
+			resetSuccess: true,
+			resetMessage: `Link de redefinição enviado para ${methodsText}!`
+		};
 	}
 };
