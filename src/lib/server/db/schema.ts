@@ -21,7 +21,7 @@ export const user = sqliteTable('user', {
 	phone: text('phone').unique(),
 	username: text('username').notNull(),
 	companyName: text('company_name').notNull(),
-	productId: text('product_id').references(() => product.id),
+	positionId: text('product_id').references(() => product.id),
 	passwordHash: text('password_hash').notNull(),
 	role: text('role', { enum: ['user', 'admin'] }).notNull().default('user'),
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())

@@ -72,8 +72,12 @@ export const GET: RequestHandler = async ({ request, params, locals }) => {
 					id: a.user.id,
 					username: a.user.username,
 					email: a.user.email,
+					phone: a.user.phone,
 					companyName: a.user.companyName,
+					positionId: a.user.positionId,
 					productName: 'productName' in a ? a.productName : null,
+					role: a.user.role,
+					createdAt: a.user.createdAt,
 					confirmedAt: a.attendance.confirmedAt,
 					attended: a.attendance.attended
 				}))

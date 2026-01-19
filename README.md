@@ -46,7 +46,7 @@ Content-Type: application/json
 | `email` | string | Filtro por email |
 | `phone` | string | Filtro por telefone |
 | `companyName` | string | Filtro por empresa |
-| `productId` | string | Filtro por produto |
+| `positionId` | string | Filtro por cargo |
 | `role` | string | `user` ou `admin` |
 | `limit` | number | Máximo de resultados (padrão: 50, max: 100) |
 | `offset` | number | Paginação |
@@ -67,8 +67,8 @@ GET /api/users?q=joao&companyName=Vorp&limit=10
       "phone": "5585999999999",
       "username": "João Silva",
       "companyName": "Vorp",
-      "productId": "prod123",
-      "productName": "Produto X",
+      "positionId": "prod123",
+      "positionName": "Cargo X",
       "role": "user",
       "createdAt": "2025-01-01T00:00:00.000Z"
     }
@@ -89,7 +89,7 @@ GET /api/users?q=joao&companyName=Vorp&limit=10
   "username": "Nome do Usuário",
   "companyName": "Empresa X",
   "password": "senha123",
-  "productId": "opcional"
+  "positionId": "opcional"
 }
 ```
 
@@ -100,7 +100,7 @@ GET /api/users?q=joao&companyName=Vorp&limit=10
 | `username` | string | ✅ | Nome (mín. 2 caracteres) |
 | `companyName` | string | ✅ | Nome da empresa |
 | `password` | string | ✅ | Senha (mín. 6 caracteres) |
-| `productId` | string | ❌ | ID do produto |
+| `positionId` | string | ❌ | ID do cargo |
 
 **Resposta (201):**
 ```json

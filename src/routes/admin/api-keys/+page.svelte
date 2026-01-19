@@ -125,7 +125,7 @@
 							<tr><td class="p-2"><code>email</code></td><td class="p-2">string</td><td class="p-2">Filtro por email</td></tr>
 							<tr><td class="p-2"><code>phone</code></td><td class="p-2">string</td><td class="p-2">Filtro por telefone</td></tr>
 							<tr><td class="p-2"><code>companyName</code></td><td class="p-2">string</td><td class="p-2">Filtro por empresa</td></tr>
-							<tr><td class="p-2"><code>productId</code></td><td class="p-2">string</td><td class="p-2">Filtro por produto</td></tr>
+							<tr><td class="p-2"><code>positionId</code></td><td class="p-2">string</td><td class="p-2">Filtro por cargo</td></tr>
 							<tr><td class="p-2"><code>role</code></td><td class="p-2">string</td><td class="p-2">user ou admin</td></tr>
 							<tr><td class="p-2"><code>limit</code></td><td class="p-2">number</td><td class="p-2">Máx. resultados (padrão: 50)</td></tr>
 							<tr><td class="p-2"><code>offset</code></td><td class="p-2">number</td><td class="p-2">Paginação</td></tr>
@@ -148,7 +148,7 @@
   "username": "Nome do Usuário",     // obrigatório (mín. 2 chars)
   "companyName": "Empresa",          // obrigatório
   "password": "senha123",            // obrigatório (mín. 6 chars)
-  "productId": "id_do_produto"       // opcional
+  "positionId": "id_do_cargo"       // opcional
 }`}</pre>
 				<p class="mt-2 text-surface-600-400">Resposta (201):</p>
 				<pre class="bg-surface-200-800 px-3 py-2 rounded overflow-x-auto mt-1">{`{
@@ -175,7 +175,7 @@
       "email": "joao@email.com",
       "phone": "85999999999",
       "companyName": "Empresa XYZ",
-      "productId": "prod123",
+      "positionId": "prod123",
       "role": "user",
       "createdAt": "2025-10-01T10:00:00.000Z"
     },
@@ -262,7 +262,7 @@
         "username": "João Silva",
         "email": "joao@email.com",
         "companyName": "Empresa XYZ",
-        "productName": "Produto A",
+        "positionName": "Cargo A",
         "confirmedAt": "2025-11-15T08:00:00.000Z",
         "attended": true
       }

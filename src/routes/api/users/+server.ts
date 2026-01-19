@@ -31,7 +31,7 @@ export const GET: RequestHandler = async ({ request, url, locals }) => {
 	const email = url.searchParams.get('email') || undefined;
 	const phone = url.searchParams.get('phone') || undefined;
 	const companyName = url.searchParams.get('companyName') || undefined;
-	const productId = url.searchParams.get('productId') || undefined;
+	const positionId = url.searchParams.get('positionId') || undefined;
 	const role = url.searchParams.get('role') as 'user' | 'admin' | undefined;
 	const limit = parseInt(url.searchParams.get('limit') || '50');
 	const offset = parseInt(url.searchParams.get('offset') || '0');
@@ -42,7 +42,7 @@ export const GET: RequestHandler = async ({ request, url, locals }) => {
 			email,
 			phone,
 			companyName,
-			productId,
+			positionId,
 			role: role === 'user' || role === 'admin' ? role : undefined,
 			limit: Math.min(limit, 100),
 			offset
@@ -102,7 +102,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		);
 	}
 
-	const { email, phone, username, companyName, password, productId } = body as Record<string, unknown>;
+	const { email, phone, username, companyName, password, positionId } = body as Record<string, unknown>;
 
 	// Validate required fields
 	const errors: string[] = [];
@@ -142,16 +142,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		errors.push('Senha deve ter pelo menos 6 caracteres');
 	}
 
-	// Validate productId if provided
-	if (productId !== undefined && productId !== null && productId !== '') {
-		if (typeof productId !== 'string') {
-			errors.push('productId deve ser uma string');
+	// Validate positionId if provided
+	if (positionId !== undefined && positionId !== null && positionId !== '') {
+		if (typeof positionId !== 'string') {
+			errors.push('positionId deve ser uma string');
 		} else {
-			const product = await products.getProductById(locals.db, productId);
+			const product = await products.getProductById(locals.db, positionId);
 			if (!product) {
-				errors.push('Produto não encontrado');
+				errors.push('Cargo não encontrado');
 			} else if (!product.isActive) {
-				errors.push('Produto está inativo');
+				errors.push('gitá inativo');
 			}
 		}
 	}
@@ -192,7 +192,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			(companyName as string).trim(),
 			password as string,
 			'user',
-			typeof productId === 'string' && productId ? productId : undefined,
+			typeof positionId === 'string' && positionId ? positionId : undefined,
 			cleanPhone
 		);
 

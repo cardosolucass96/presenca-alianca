@@ -20,7 +20,7 @@ async function checkDb() {
 	users.forEach(u => console.log(`   - ${u.email} (${u.role}) - ${u.companyName}`));
 
 	const products = await db.select().from(schema.product);
-	console.log('\n📦 Produtos no banco:', products.length);
+	console.log('\n💼a Cargos no banco:', products.length);
 	products.forEach(p => console.log(`   - ${p.name} (${p.isActive ? 'ativo' : 'inativo'})`));
 
 	const events = await db.select().from(schema.event);

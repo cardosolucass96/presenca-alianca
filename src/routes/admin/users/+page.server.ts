@@ -24,7 +24,7 @@ export const actions: Actions = {
 		const username = formData.get('username');
 		const companyName = formData.get('companyName');
 		const password = formData.get('password');
-		const productId = formData.get('productId');
+		const positionId = formData.get('positionId');
 		const role = formData.get('role');
 
 		if (
@@ -65,7 +65,7 @@ export const actions: Actions = {
 				companyName,
 				password,
 				role === 'admin' ? 'admin' : 'user',
-				typeof productId === 'string' && productId ? productId : undefined,
+				typeof positionId === 'string' && positionId ? positionId : undefined,
 				cleanPhone
 			);
 

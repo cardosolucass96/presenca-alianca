@@ -351,7 +351,7 @@
 								<tr>
 									<th>Nome</th>
 									<th>Empresa</th>
-									<th>Produto</th>
+									<th>Cargo</th>
 									<th>Email</th>
 									<th>Confirmado em</th>
 								</tr>

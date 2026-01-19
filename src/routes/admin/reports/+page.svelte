@@ -25,10 +25,10 @@
 	let fromDate = $state(data.filters.fromDate || '');
 	let toDate = $state(data.filters.toDate || '');
 	let categoryId = $state(data.filters.categoryId || '');
-	let productId = $state(data.filters.productId || '');
+	let positionId = $state(data.filters.positionId || '');
 
 	// Check if any filter is active
-	const hasActiveFilters = $derived(fromDate || toDate || categoryId || productId);
+	const hasActiveFilters = $derived(fromDate || toDate || categoryId || positionId);
 
 	// Sorting for users table
 	type UserSortColumn = 'username' | 'companyName' | 'productName' | 'attendedEvents' | 'attendanceRate' | 'lastAttendance';
@@ -160,7 +160,7 @@
 		if (fromDate) params.set('fromDate', fromDate);
 		if (toDate) params.set('toDate', toDate);
 		if (categoryId) params.set('categoryId', categoryId);
-		if (productId) params.set('productId', productId);
+		if (positionId) params.set('positionId', positionId);
 		goto(`/admin/reports?${params.toString()}`);
 	}
 
@@ -168,7 +168,7 @@
 		fromDate = '';
 		toDate = '';
 		categoryId = '';
-		productId = '';
+		positionId = '';
 		goto('/admin/reports');
 	}
 
@@ -640,7 +640,7 @@
 	<h1>Relatório de Presenças - Aliança</h1>
 	<p>Gerado em: {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
 	{#if hasActiveFilters}
-		<p>Filtros: {fromDate ? `De ${fromDate}` : ''} {toDate ? `Até ${toDate}` : ''} {categoryId ? `| Categoria selecionada` : ''} {productId ? `| Cargo selecionado` : ''}</p>
+		<p>Filtros: {fromDate ? `De ${fromDate}` : ''} {toDate ? `Até ${toDate}` : ''} {categoryId ? `| Categoria selecionada` : ''} {positionId ? `| Cargo selecionado` : ''}</p>
 	{/if}
 </div>
 
@@ -679,7 +679,7 @@
 						{/each}
 					</select>
 					
-					<select bind:value={productId} class="select !py-1.5 !px-2 text-sm w-36">
+					<select bind:value={positionId} class="select !py-1.5 !px-2 text-sm w-36">
 						<option value="">Todos cargos</option>
 						{#each data.products as product}
 							<option value={product.id}>{product.name}</option>

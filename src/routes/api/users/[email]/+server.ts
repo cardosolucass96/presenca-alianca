@@ -1,8 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import * as apiKeys from '$lib/server/apiKeys';
-import { getUserByEmail } from '$lib/server/auth';
-import { getUserEventsWithCategories } from '$lib/server/users';
+import { getUserEventsWithCategories, getUserByEmailWithProduct } from '$lib/server/users';
 
 // GET /api/users/[email] - Get user details with all events they attended
 export const GET: RequestHandler = async ({ request, params, locals }) => {
@@ -38,8 +37,8 @@ export const GET: RequestHandler = async ({ request, params, locals }) => {
 	const decodedEmail = decodeURIComponent(email).toLowerCase();
 
 	try {
-		// Buscar usuário pelo email
-		const user = await getUserByEmail(locals.db, decodedEmail);
+		// Buscar usuário pelo email (com nome do cargo)
+		const user = await getUserByEmailWithProduct(locals.db, decodedEmail);
 
 		if (!user) {
 			return json(
@@ -48,7 +47,7 @@ export const GET: RequestHandler = async ({ request, params, locals }) => {
 			);
 		}
 
-		// Buscar eventos que o usuário participou
+		// Buscar eventos que o usuário participou (com todas as informações)
 		const events = await getUserEventsWithCategories(locals.db, user.id);
 
 		return json({
@@ -60,7 +59,8 @@ export const GET: RequestHandler = async ({ request, params, locals }) => {
 					email: user.email,
 					phone: user.phone,
 					companyName: user.companyName,
-					productId: user.productId,
+					positionId: user.positionId,
+					productName: user.productName,
 					role: user.role,
 					createdAt: user.createdAt
 				},

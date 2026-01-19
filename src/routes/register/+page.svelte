@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolveRoute } from '$app/paths';
-	import { User, Building2, Mail, Lock, Package, UserPlus, LogIn } from 'lucide-svelte';
+	import { User, Building2, Mail, Lock, Package, UserPlus, LogIn, Phone } from 'lucide-svelte';
 	import { Alert, AuthLayout } from '$lib';
 
 	let { form, data } = $props();
@@ -49,13 +49,27 @@
 			/>
 		</label>
 
+		<label class="label">
+			<span class="flex items-center gap-2 mb-1">
+				<Phone class="w-4 h-4 text-surface-500" />
+				Telefone
+			</span>
+			<input
+				type="tel"
+				name="phone"
+				class="input"
+				placeholder="(11) 98765-4321"
+				required
+			/>
+		</label>
+
 		{#if data.products.length > 0}
 			<label class="label">
 				<span class="flex items-center gap-2 mb-1">
 					<Package class="w-4 h-4 text-surface-500" />
 					Cargo
 				</span>
-				<select name="productId" class="select">
+				<select name="positionId" class="select">
 					<option value="">Selecione seu cargo (opcional)</option>
 					{#each data.products as product}
 						<option value={product.id}>{product.name}</option>

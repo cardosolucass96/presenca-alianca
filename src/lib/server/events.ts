@@ -119,13 +119,17 @@ export async function getEventAttendees(db: Database, eventId: string) {
 				id: table.user.id,
 				username: table.user.username,
 				email: table.user.email,
-				companyName: table.user.companyName
+				phone: table.user.phone,
+				companyName: table.user.companyName,
+				positionId: table.user.positionId,
+				role: table.user.role,
+				createdAt: table.user.createdAt
 			},
 			productName: table.product.name
 		})
 		.from(table.attendance)
 		.innerJoin(table.user, eq(table.attendance.userId, table.user.id))
-		.leftJoin(table.product, eq(table.user.productId, table.product.id))
+		.leftJoin(table.product, eq(table.user.positionId, table.product.id))
 		.where(and(
 			eq(table.attendance.eventId, eventId),
 			eq(table.user.role, 'user') // Exclui administradores

@@ -121,7 +121,7 @@ export async function createUser(
 	companyName: string,
 	password: string,
 	role: 'user' | 'admin' = 'user',
-	productId?: string,
+	positionId?: string,
 	phone?: string
 ) {
 	const passwordHash = await hashPassword(password);
@@ -133,7 +133,7 @@ export async function createUser(
 		phone: phone ? phone.replace(/\D/g, '') : null,
 		username,
 		companyName,
-		productId: productId || null,
+		positionId: positionId || null,
 		passwordHash,
 		role
 	});

@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Deploy Production",
+			"type": "shell",
+			"command": "npm run build && npx wrangler pages deploy .svelte-kit/cloudflare --branch production",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}

@@ -11,7 +11,7 @@ export async function getAllUsers(db: Database) {
 			phone: table.user.phone,
 			username: table.user.username,
 			companyName: table.user.companyName,
-			productId: table.user.productId,
+			positionId: table.user.positionId,
 			role: table.user.role,
 			createdAt: table.user.createdAt
 		})
@@ -27,7 +27,7 @@ export async function getUserById(db: Database, id: string) {
 			phone: table.user.phone,
 			username: table.user.username,
 			companyName: table.user.companyName,
-			productId: table.user.productId,
+			positionId: table.user.positionId,
 			role: table.user.role,
 			createdAt: table.user.createdAt
 		})
@@ -45,14 +45,14 @@ export async function getUserWithProduct(db: Database, id: string) {
 				phone: table.user.phone,
 				username: table.user.username,
 				companyName: table.user.companyName,
-				productId: table.user.productId,
+				positionId: table.user.positionId,
 				role: table.user.role,
 				createdAt: table.user.createdAt
 			},
 			productName: table.product.name
 		})
 		.from(table.user)
-		.leftJoin(table.product, eq(table.user.productId, table.product.id))
+		.leftJoin(table.product, eq(table.user.positionId, table.product.id))
 		.where(eq(table.user.id, id));
 	return result ?? null;
 }
@@ -65,7 +65,7 @@ export async function updateUser(
 		phone?: string | null;
 		username?: string;
 		companyName?: string;
-		productId?: string | null;
+		positionId?: string | null;
 		role?: 'user' | 'admin';
 	}
 ) {
@@ -75,7 +75,7 @@ export async function updateUser(
 	if (data.phone !== undefined) updateData.phone = data.phone ? data.phone.replace(/\D/g, '') : null;
 	if (data.username !== undefined) updateData.username = data.username;
 	if (data.companyName !== undefined) updateData.companyName = data.companyName;
-	if (data.productId !== undefined) updateData.productId = data.productId;
+	if (data.positionId !== undefined) updateData.positionId = data.positionId;
 	if (data.role !== undefined) updateData.role = data.role;
 
 	await db.update(table.user).set(updateData).where(eq(table.user.id, id));
@@ -103,13 +103,13 @@ export async function getUsersWithProducts(db: Database) {
 			phone: table.user.phone,
 			username: table.user.username,
 			companyName: table.user.companyName,
-			productId: table.user.productId,
+			positionId: table.user.positionId,
 			productName: table.product.name,
 			role: table.user.role,
 			createdAt: table.user.createdAt
 		})
 		.from(table.user)
-		.leftJoin(table.product, eq(table.user.productId, table.product.id))
+		.leftJoin(table.product, eq(table.user.positionId, table.product.id))
 		.orderBy(desc(table.user.createdAt));
 }
 
@@ -137,9 +137,13 @@ export async function getUserEventsWithCategories(db: Database, userId: string) 
 			eventId: table.event.id,
 			eventName: table.event.name,
 			eventSlug: table.event.slug,
+			eventDescription: table.event.description,
 			eventDateTime: table.event.dateTime,
 			eventEndTime: table.event.endTime,
 			eventMeetLink: table.event.meetLink,
+			eventExpectedAttendees: table.event.expectedAttendees,
+			eventIsActive: table.event.isActive,
+			eventCreatedAt: table.event.createdAt,
 			confirmedAt: table.attendance.confirmedAt,
 			attended: table.attendance.attended
 		})
@@ -165,9 +169,13 @@ export async function getUserEventsWithCategories(db: Database, userId: string) 
 				id: att.eventId,
 				name: att.eventName,
 				slug: att.eventSlug,
+				description: att.eventDescription,
 				dateTime: att.eventDateTime,
 				endTime: att.eventEndTime,
 				meetLink: att.eventMeetLink,
+				expectedAttendees: att.eventExpectedAttendees,
+				isActive: att.eventIsActive,
+				createdAt: att.eventCreatedAt,
 				confirmedAt: att.confirmedAt,
 				attended: att.attended,
 				categories
@@ -178,19 +186,38 @@ export async function getUserEventsWithCategories(db: Database, userId: string) 
 	return eventsWithCategories;
 }
 
+export async function getUserByEmailWithProduct(db: Database, email: string) {
+	const [result] = await db
+		.select({
+			id: table.user.id,
+			email: table.user.email,
+			phone: table.user.phone,
+			username: table.user.username,
+			companyName: table.user.companyName,
+			positionId: table.user.positionId,
+			productName: table.product.name,
+			role: table.user.role,
+			createdAt: table.user.createdAt
+		})
+		.from(table.user)
+		.leftJoin(table.product, eq(table.user.positionId, table.product.id))
+		.where(eq(table.user.email, email));
+	return result ?? null;
+}
+
 export interface SearchUsersParams {
 	query?: string;
 	email?: string;
 	phone?: string;
 	companyName?: string;
-	productId?: string;
+	positionId?: string;
 	role?: 'user' | 'admin';
 	limit?: number;
 	offset?: number;
 }
 
 export async function searchUsers(db: Database, params: SearchUsersParams) {
-	const { query, email, phone, companyName, productId, role, limit = 50, offset = 0 } = params;
+	const { query, email, phone, companyName, positionId, role, limit = 50, offset = 0 } = params;
 
 	const conditions = [];
 
@@ -212,7 +239,7 @@ export async function searchUsers(db: Database, params: SearchUsersParams) {
 		conditions.push(like(table.user.phone, `%${cleanPhone}%`));
 	}
 	if (companyName) conditions.push(like(table.user.companyName, `%${companyName}%`));
-	if (productId) conditions.push(eq(table.user.productId, productId));
+	if (positionId) conditions.push(eq(table.user.positionId, positionId));
 	if (role) conditions.push(eq(table.user.role, role));
 
 	const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -229,13 +256,13 @@ export async function searchUsers(db: Database, params: SearchUsersParams) {
 			phone: table.user.phone,
 			username: table.user.username,
 			companyName: table.user.companyName,
-			productId: table.user.productId,
+			positionId: table.user.positionId,
 			productName: table.product.name,
 			role: table.user.role,
 			createdAt: table.user.createdAt
 		})
 		.from(table.user)
-		.leftJoin(table.product, eq(table.user.productId, table.product.id))
+		.leftJoin(table.product, eq(table.user.positionId, table.product.id))
 		.where(whereClause)
 		.orderBy(desc(table.user.createdAt))
 		.limit(limit)

@@ -91,7 +91,7 @@
 
 					<label class="label">
 						<span>Cargo</span>
-						<select name="productId" class="select">
+						<select name="positionId" class="select">
 							<option value="">Sem cargo</option>
 							{#each data.products as product}
 								{#if product.isActive}

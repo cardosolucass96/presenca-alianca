@@ -22,16 +22,13 @@ export const actions: Actions = {
 		const formData = await event.request.formData();
 		const username = formData.get('username');
 		const companyName = formData.get('companyName');
-		const productId = formData.get('productId');
-		const email = formData.get('email');
-		const password = formData.get('password');
-		const confirmPassword = formData.get('confirmPassword');
-		const redirectTo = formData.get('redirectTo');
+		const phone = formData.get('phone');
 
 		// Validação de tipos
 		if (
 			typeof username !== 'string' ||
 			typeof companyName !== 'string' ||
+			typeof phone !== 'string' ||
 			typeof email !== 'string' ||
 			typeof password !== 'string' ||
 			typeof confirmPassword !== 'string'
@@ -39,7 +36,7 @@ export const actions: Actions = {
 			return fail(400, { error: 'Dados inválidos' });
 		}
 
-		if (!username || !companyName || !email || !password) {
+		if (!username || !companyName || !phone || !email || !password) {
 			return fail(400, { error: 'Todos os campos são obrigatórios' });
 		}
 
@@ -51,6 +48,12 @@ export const actions: Actions = {
 		// Validação de empresa
 		if (companyName.length < 2 || companyName.length > 100) {
 			return fail(400, { error: 'Nome da empresa deve ter entre 2 e 100 caracteres' });
+		}
+
+		// Validação de telefone
+		const phoneDigits = phone.replace(/\D/g, '');
+		if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+			return fail(400, { error: 'Telefone inválido. Use o formato (DD) 9XXXX-XXXX' });
 		}
 
 		// Validação de email
@@ -80,7 +83,8 @@ export const actions: Actions = {
 				companyName, 
 				password,
 				'user',
-				typeof productId === 'string' && productId ? productId : undefined
+				typeof positionId === 'string' && positionId ? positionId : undefined,
+				phone
 			);
 			const token = auth.generateSessionToken();
 			const session = await auth.createSession(event.locals.db, token, userId);

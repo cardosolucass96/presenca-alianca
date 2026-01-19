@@ -81,11 +81,11 @@
 
 <label class="label">
 									<span>Cargo</span>
-									<select name="productId" class="select">
+									<select name="positionId" class="select">
 										<option value="">Sem cargo</option>
 										{#each data.products as product}
-											{#if product.isActive || product.id === data.user.productId}
-												<option value={product.id} selected={product.id === data.user.productId}>
+											{#if product.isActive || product.id === data.user.positionId}
+												<option value={product.id} selected={product.id === data.user.positionId}>
 													{product.name}
 												</option>
 											{/if}

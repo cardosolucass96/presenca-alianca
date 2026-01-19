@@ -54,7 +54,7 @@
 		.map(([name, members]) => ({ name, count: members.length, members }))
 		.sort((a, b) => b.count - a.count);
 
-	// Agrupamento por cargo (produto)
+	// Agrupamento por cargo (cargo)
 	const rolesMap = new Map<string, Attendee[]>();
 	attendees.forEach(a => {
 		const role = getProductName(a) || 'Não informado';

@@ -31,7 +31,7 @@ export const actions: Actions = {
 		const phone = formData.get('phone');
 		const username = formData.get('username');
 		const companyName = formData.get('companyName');
-		const productId = formData.get('productId');
+		const positionId = formData.get('positionId');
 		const role = formData.get('role');
 
 		if (
@@ -65,7 +65,7 @@ export const actions: Actions = {
 				phone: cleanPhone,
 				username,
 				companyName,
-				productId: typeof productId === 'string' && productId ? productId : null,
+				positionId: typeof positionId === 'string' && positionId ? positionId : null,
 				role: role === 'admin' ? 'admin' : 'user'
 			});
 

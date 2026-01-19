@@ -1,4 +1,4 @@
-import { eq, desc, sql, and, gte, lte, count, asc } from 'drizzle-orm';
+import { eq, desc, sql, and, gte, lte, count, asc, inArray } from 'drizzle-orm';
 import type { Database } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
 
@@ -6,7 +6,7 @@ export interface ReportFilters {
 	fromDate?: Date;
 	toDate?: Date;
 	categoryId?: string;
-	productId?: string;
+	positionId?: string;
 }
 
 export interface DetailedAttendance {
@@ -70,58 +70,84 @@ export interface CategoryStats {
 }
 
 export interface ProductStats {
-	productId: string | null;
+	positionId: string | null;
 	productName: string | null;
 	totalUsers: number;
 	totalAttendances: number;
 	averageAttendanceRate: number;
 }
 
-export async function getOverviewStats(db: Database, filters: ReportFilters = {}): Promise<OverviewStats> {
+// Helper function to get filtered event IDs
+async function getFilteredEventIds(db: Database, filters: ReportFilters): Promise<string[]> {
 	const { fromDate, toDate, categoryId } = filters;
 
-	const eventConditions = [];
-	if (fromDate) eventConditions.push(gte(table.event.dateTime, fromDate));
-	if (toDate) eventConditions.push(lte(table.event.dateTime, toDate));
-	eventConditions.push(eq(table.event.isActive, true));
+	const conditions = [eq(table.event.isActive, true)];
+	if (fromDate) conditions.push(gte(table.event.dateTime, fromDate));
+	if (toDate) conditions.push(lte(table.event.dateTime, toDate));
 
-	let eventIds: string[] | null = null;
+	let events = await db
+		.select({ id: table.event.id })
+		.from(table.event)
+		.where(and(...conditions));
+
 	if (categoryId) {
 		const eventsWithCategory = await db
 			.select({ eventId: table.eventCategory.eventId })
 			.from(table.eventCategory)
 			.where(eq(table.eventCategory.categoryId, categoryId));
-		eventIds = eventsWithCategory.map(e => e.eventId);
+		const categoryEventIds = new Set(eventsWithCategory.map(e => e.eventId));
+		events = events.filter(e => categoryEventIds.has(e.id));
 	}
 
-	const events = await db.select().from(table.event).where(and(...eventConditions));
-	const filteredEvents = eventIds ? events.filter(e => eventIds!.includes(e.id)) : events;
+	return events.map(e => e.id);
+}
 
-	let totalAttendances = 0;
-	let totalExpected = 0;
+export async function getOverviewStats(db: Database, filters: ReportFilters = {}): Promise<OverviewStats> {
+	const eventIds = await getFilteredEventIds(db, filters);
 
-	for (const event of filteredEvents) {
-		const [attendanceResult] = await db
+	if (eventIds.length === 0) {
+		const [usersResult] = await db
 			.select({ count: count() })
-			.from(table.attendance)
-			.innerJoin(table.user, eq(table.attendance.userId, table.user.id))
-			.where(and(
-				eq(table.attendance.eventId, event.id),
-				eq(table.user.role, 'user') // Exclui administradores
-			));
-		totalAttendances += attendanceResult?.count ?? 0;
-		totalExpected += event.expectedAttendees;
+			.from(table.user)
+			.where(eq(table.user.role, 'user'));
+
+		return {
+			totalEvents: 0,
+			totalUsers: usersResult?.count ?? 0,
+			totalAttendances: 0,
+			averageAttendanceRate: 0,
+			totalExpectedAttendees: 0
+		};
 	}
 
-	// Conta apenas usuários não-admin
+	// Get total expected attendees in one query
+	const [expectedResult] = await db
+		.select({ total: sql<number>`COALESCE(SUM(${table.event.expectedAttendees}), 0)` })
+		.from(table.event)
+		.where(inArray(table.event.id, eventIds));
+
+	// Get total attendances in one query (excluding admins)
+	const [attendanceResult] = await db
+		.select({ count: count() })
+		.from(table.attendance)
+		.innerJoin(table.user, eq(table.attendance.userId, table.user.id))
+		.where(and(
+			inArray(table.attendance.eventId, eventIds),
+			eq(table.user.role, 'user')
+		));
+
+	// Count users (excluding admins)
 	const [usersResult] = await db
 		.select({ count: count() })
 		.from(table.user)
 		.where(eq(table.user.role, 'user'));
+
+	const totalExpected = Number(expectedResult?.total ?? 0);
+	const totalAttendances = attendanceResult?.count ?? 0;
 	const averageRate = totalExpected > 0 ? (totalAttendances / totalExpected) * 100 : 0;
 
 	return {
-		totalEvents: filteredEvents.length,
+		totalEvents: eventIds.length,
 		totalUsers: usersResult?.count ?? 0,
 		totalAttendances,
 		averageAttendanceRate: Math.round(averageRate * 10) / 10,
@@ -151,70 +177,76 @@ export async function getEventsAttendanceData(db: Database, filters: ReportFilte
 		events = events.filter(e => eventIds.has(e.id));
 	}
 
-	const result: EventAttendanceData[] = [];
+	if (events.length === 0) {
+		return [];
+	}
 
-	for (const event of events) {
-		const [attendanceResult] = await db
-			.select({ count: count() })
-			.from(table.attendance)
-			.innerJoin(table.user, eq(table.attendance.userId, table.user.id))
-			.where(and(
-				eq(table.attendance.eventId, event.id),
-				eq(table.user.role, 'user') // Exclui administradores
-			));
+	const eventIds = events.map(e => e.id);
 
-		const categories = await db
-			.select({
-				id: table.category.id,
-				name: table.category.name,
-				color: table.category.color
-			})
-			.from(table.eventCategory)
-			.innerJoin(table.category, eq(table.eventCategory.categoryId, table.category.id))
-			.where(eq(table.eventCategory.eventId, event.id));
+	// Get all attendance counts in one query
+	const attendanceCounts = await db
+		.select({
+			eventId: table.attendance.eventId,
+			count: count()
+		})
+		.from(table.attendance)
+		.innerJoin(table.user, eq(table.attendance.userId, table.user.id))
+		.where(and(
+			inArray(table.attendance.eventId, eventIds),
+			eq(table.user.role, 'user')
+		))
+		.groupBy(table.attendance.eventId);
 
-		const actualAttendees = attendanceResult?.count ?? 0;
+	const attendanceMap = new Map(attendanceCounts.map(a => [a.eventId, a.count]));
+
+	// Get all categories for all events in one query
+	const allCategories = await db
+		.select({
+			eventId: table.eventCategory.eventId,
+			id: table.category.id,
+			name: table.category.name,
+			color: table.category.color
+		})
+		.from(table.eventCategory)
+		.innerJoin(table.category, eq(table.eventCategory.categoryId, table.category.id))
+		.where(inArray(table.eventCategory.eventId, eventIds));
+
+	const categoriesMap = new Map<string, { id: string; name: string; color: string }[]>();
+	for (const cat of allCategories) {
+		if (!categoriesMap.has(cat.eventId)) {
+			categoriesMap.set(cat.eventId, []);
+		}
+		categoriesMap.get(cat.eventId)!.push({ id: cat.id, name: cat.name, color: cat.color });
+	}
+
+	return events.map(event => {
+		const actualAttendees = attendanceMap.get(event.id) ?? 0;
 		const attendanceRate = event.expectedAttendees > 0
 			? (actualAttendees / event.expectedAttendees) * 100
 			: 0;
 
-		result.push({
+		return {
 			eventId: event.id,
 			eventName: event.name,
 			eventDate: event.dateTime,
 			expectedAttendees: event.expectedAttendees,
 			actualAttendees,
 			attendanceRate: Math.round(attendanceRate * 10) / 10,
-			categories
-		});
-	}
-
-	return result;
+			categories: categoriesMap.get(event.id) ?? []
+		};
+	});
 }
 
 export async function getUsersAttendanceData(db: Database, filters: ReportFilters = {}): Promise<UserAttendanceData[]> {
-	const { fromDate, toDate, categoryId, productId } = filters;
-
-	const eventConditions = [eq(table.event.isActive, true)];
-	if (fromDate) eventConditions.push(gte(table.event.dateTime, fromDate));
-	if (toDate) eventConditions.push(lte(table.event.dateTime, toDate));
-
-	let events = await db
-		.select({ id: table.event.id })
-		.from(table.event)
-		.where(and(...eventConditions));
-
-	if (categoryId) {
-		const eventsWithCategory = await db
-			.select({ eventId: table.eventCategory.eventId })
-			.from(table.eventCategory)
-			.where(eq(table.eventCategory.categoryId, categoryId));
-		const eventIds = new Set(eventsWithCategory.map(e => e.eventId));
-		events = events.filter(e => eventIds.has(e.id));
-	}
-
-	const eventIds = events.map(e => e.id);
+	const { positionId } = filters;
+	const eventIds = await getFilteredEventIds(db, filters);
 	const totalEventsInPeriod = eventIds.length;
+
+	// Get all users with their products
+	const userConditions = [eq(table.user.role, 'user')];
+	if (positionId) {
+		userConditions.push(eq(table.user.positionId, positionId));
+	}
 
 	const users = await db
 		.select({
@@ -222,40 +254,57 @@ export async function getUsersAttendanceData(db: Database, filters: ReportFilter
 			username: table.user.username,
 			email: table.user.email,
 			companyName: table.user.companyName,
-			productId: table.user.productId,
+			positionId: table.user.positionId,
 			productName: table.product.name
 		})
 		.from(table.user)
-		.leftJoin(table.product, eq(table.user.productId, table.product.id))
-		.where(eq(table.user.role, 'user'));
+		.leftJoin(table.product, eq(table.user.positionId, table.product.id))
+		.where(and(...userConditions));
 
-	const filteredUsers = productId ? users.filter(u => u.productId === productId) : users;
+	if (users.length === 0) {
+		return [];
+	}
 
-	const result: UserAttendanceData[] = [];
+	const userIdsSet = new Set(users.map(u => u.id));
+	const eventIdsSet = new Set(eventIds);
 
-	for (const user of filteredUsers) {
-		const attendances = await db
-			.select({
-				eventId: table.attendance.eventId,
-				confirmedAt: table.attendance.confirmedAt
-			})
-			.from(table.attendance)
-			.where(eq(table.attendance.userId, user.id));
+	// Get all attendances and filter in JavaScript to avoid too many SQL parameters
+	// D1 has a limit on query parameters, so we fetch all and filter client-side
+	const allAttendances = await db
+		.select({
+			userId: table.attendance.userId,
+			eventId: table.attendance.eventId,
+			confirmedAt: table.attendance.confirmedAt
+		})
+		.from(table.attendance);
 
-		const filteredAttendances = eventIds.length > 0
-			? attendances.filter(a => eventIds.includes(a.eventId))
-			: attendances;
+	// Filter attendances by user IDs and event IDs
+	const filteredAttendances = allAttendances.filter(att => 
+		userIdsSet.has(att.userId) && 
+		(eventIds.length === 0 || eventIdsSet.has(att.eventId))
+	);
 
-		const attendedEvents = filteredAttendances.length;
+	// Group attendances by user
+	const userAttendanceMap = new Map<string, Date[]>();
+	for (const att of filteredAttendances) {
+		if (!userAttendanceMap.has(att.userId)) {
+			userAttendanceMap.set(att.userId, []);
+		}
+		userAttendanceMap.get(att.userId)!.push(att.confirmedAt);
+	}
+
+	return users.map(user => {
+		const attendances = userAttendanceMap.get(user.id) ?? [];
+		const attendedEvents = attendances.length;
 		const attendanceRate = totalEventsInPeriod > 0
 			? (attendedEvents / totalEventsInPeriod) * 100
 			: 0;
 
-		const lastAttendance = filteredAttendances.length > 0
-			? new Date(Math.max(...filteredAttendances.map(a => a.confirmedAt.getTime())))
+		const lastAttendance = attendances.length > 0
+			? new Date(Math.max(...attendances.map(a => a.getTime())))
 			: null;
 
-		result.push({
+		return {
 			userId: user.id,
 			username: user.username,
 			email: user.email,
@@ -265,10 +314,8 @@ export async function getUsersAttendanceData(db: Database, filters: ReportFilter
 			attendedEvents,
 			attendanceRate: Math.round(attendanceRate * 10) / 10,
 			lastAttendance
-		});
-	}
-
-	return result.sort((a, b) => b.attendanceRate - a.attendanceRate);
+		};
+	}).sort((a, b) => b.attendanceRate - a.attendanceRate);
 }
 
 export async function getAttendanceTrends(db: Database, filters: ReportFilters = {}): Promise<AttendanceTrend[]> {
@@ -294,160 +341,154 @@ export async function getCategoryStats(db: Database, filters: ReportFilters = {}
 		.from(table.category)
 		.where(eq(table.category.isActive, true));
 
-	const result: CategoryStats[] = [];
-
-	for (const category of categories) {
-		const eventConditions = [eq(table.event.isActive, true)];
-		if (fromDate) eventConditions.push(gte(table.event.dateTime, fromDate));
-		if (toDate) eventConditions.push(lte(table.event.dateTime, toDate));
-
-		const eventsInCategory = await db
-			.select({ eventId: table.eventCategory.eventId })
-			.from(table.eventCategory)
-			.innerJoin(table.event, eq(table.eventCategory.eventId, table.event.id))
-			.where(and(
-				eq(table.eventCategory.categoryId, category.id),
-				...eventConditions
-			));
-
-		const eventIds = eventsInCategory.map(e => e.eventId);
-
-		if (eventIds.length === 0) {
-			result.push({
-				categoryId: category.id,
-				categoryName: category.name,
-				categoryColor: category.color,
-				totalEvents: 0,
-				totalAttendees: 0,
-				averageAttendanceRate: 0
-			});
-			continue;
-		}
-
-		let totalAttendees = 0;
-		let totalExpected = 0;
-
-		for (const eventId of eventIds) {
-			const [event] = await db
-				.select({ expectedAttendees: table.event.expectedAttendees })
-				.from(table.event)
-				.where(eq(table.event.id, eventId));
-
-			const [attendanceResult] = await db
-				.select({ count: count() })
-				.from(table.attendance)
-				.innerJoin(table.user, eq(table.attendance.userId, table.user.id))
-				.where(and(
-					eq(table.attendance.eventId, eventId),
-					eq(table.user.role, 'user') // Exclui administradores
-				));
-
-			totalAttendees += attendanceResult?.count ?? 0;
-			totalExpected += event?.expectedAttendees ?? 0;
-		}
-
-		const averageRate = totalExpected > 0 ? (totalAttendees / totalExpected) * 100 : 0;
-
-		result.push({
-			categoryId: category.id,
-			categoryName: category.name,
-			categoryColor: category.color,
-			totalEvents: eventIds.length,
-			totalAttendees,
-			averageAttendanceRate: Math.round(averageRate * 10) / 10
-		});
+	if (categories.length === 0) {
+		return [];
 	}
 
-	return result.sort((a, b) => b.totalEvents - a.totalEvents);
-}
-
-export async function getProductStats(db: Database, filters: ReportFilters = {}): Promise<ProductStats[]> {
-	const { fromDate, toDate, categoryId } = filters;
-
+	// Build event conditions
 	const eventConditions = [eq(table.event.isActive, true)];
 	if (fromDate) eventConditions.push(gte(table.event.dateTime, fromDate));
 	if (toDate) eventConditions.push(lte(table.event.dateTime, toDate));
 
-	let events = await db
-		.select({ id: table.event.id, expectedAttendees: table.event.expectedAttendees })
+	// Get all events with their expected attendees
+	const events = await db
+		.select({
+			id: table.event.id,
+			expectedAttendees: table.event.expectedAttendees
+		})
 		.from(table.event)
 		.where(and(...eventConditions));
 
-	if (categoryId) {
-		const eventsWithCategory = await db
-			.select({ eventId: table.eventCategory.eventId })
-			.from(table.eventCategory)
-			.where(eq(table.eventCategory.categoryId, categoryId));
-		const eventIds = new Set(eventsWithCategory.map(e => e.eventId));
-		events = events.filter(e => eventIds.has(e.id));
-	}
-
+	const eventMap = new Map(events.map(e => [e.id, e.expectedAttendees]));
 	const eventIds = events.map(e => e.id);
-	const products = await db.select().from(table.product);
 
-	const result: ProductStats[] = [];
-
-	for (const product of products) {
-		const [usersResult] = await db
-			.select({ count: count() })
-			.from(table.user)
-			.where(and(
-				eq(table.user.productId, product.id),
-				eq(table.user.role, 'user') // Exclui administradores
-			));
-
-		const attendances = await db
-			.select({ eventId: table.attendance.eventId })
-			.from(table.attendance)
-			.innerJoin(table.user, eq(table.attendance.userId, table.user.id))
-			.where(and(
-				eq(table.user.productId, product.id),
-				eq(table.user.role, 'user') // Exclui administradores
-			));
-
-		const filteredAttendances = eventIds.length > 0
-			? attendances.filter(a => eventIds.includes(a.eventId))
-			: attendances;
-
-		const totalAttendances = filteredAttendances.length;
-		const totalExpected = events.reduce((sum) => sum + (usersResult?.count ?? 0), 0);
-		const averageRate = totalExpected > 0 ? (totalAttendances / totalExpected) * 100 : 0;
-
-		result.push({
-			productId: product.id,
-			productName: product.name,
-			totalUsers: usersResult?.count ?? 0,
-			totalAttendances,
-			averageAttendanceRate: Math.round(averageRate * 10) / 10
-		});
+	if (eventIds.length === 0) {
+		return categories.map(category => ({
+			categoryId: category.id,
+			categoryName: category.name,
+			categoryColor: category.color,
+			totalEvents: 0,
+			totalAttendees: 0,
+			averageAttendanceRate: 0
+		}));
 	}
 
-	const [noProductUsers] = await db
-		.select({ count: count() })
-		.from(table.user)
-		.where(and(
-			sql`${table.user.productId} IS NULL`,
-			eq(table.user.role, 'user') // Exclui administradores
-		));
+	// Get all event-category relationships
+	const eventCategories = await db
+		.select({
+			eventId: table.eventCategory.eventId,
+			categoryId: table.eventCategory.categoryId
+		})
+		.from(table.eventCategory)
+		.where(inArray(table.eventCategory.eventId, eventIds));
 
-	const noProductAttendances = await db
-		.select({ eventId: table.attendance.eventId })
+	// Get all attendances for these events
+	const attendanceCounts = await db
+		.select({
+			eventId: table.attendance.eventId,
+			count: count()
+		})
 		.from(table.attendance)
 		.innerJoin(table.user, eq(table.attendance.userId, table.user.id))
 		.where(and(
-			sql`${table.user.productId} IS NULL`,
-			eq(table.user.role, 'user') // Exclui administradores
-		));
+			inArray(table.attendance.eventId, eventIds),
+			eq(table.user.role, 'user')
+		))
+		.groupBy(table.attendance.eventId);
 
-	const filteredNoProductAttendances = eventIds.length > 0
-		? noProductAttendances.filter(a => eventIds.includes(a.eventId))
-		: noProductAttendances;
+	const attendanceMap = new Map(attendanceCounts.map(a => [a.eventId, a.count]));
+
+	// Calculate stats per category
+	const categoryStats = new Map<string, { events: Set<string>; attendees: number; expected: number }>();
+	
+	for (const category of categories) {
+		categoryStats.set(category.id, { events: new Set(), attendees: 0, expected: 0 });
+	}
+
+	for (const ec of eventCategories) {
+		const stats = categoryStats.get(ec.categoryId);
+		if (stats && eventMap.has(ec.eventId)) {
+			stats.events.add(ec.eventId);
+			stats.attendees += attendanceMap.get(ec.eventId) ?? 0;
+			stats.expected += eventMap.get(ec.eventId) ?? 0;
+		}
+	}
+
+	return categories.map(category => {
+		const stats = categoryStats.get(category.id)!;
+		const averageRate = stats.expected > 0 ? (stats.attendees / stats.expected) * 100 : 0;
+
+		return {
+			categoryId: category.id,
+			categoryName: category.name,
+			categoryColor: category.color,
+			totalEvents: stats.events.size,
+			totalAttendees: stats.attendees,
+			averageAttendanceRate: Math.round(averageRate * 10) / 10
+		};
+	}).sort((a, b) => b.totalEvents - a.totalEvents);
+}
+
+export async function getProductStats(db: Database, filters: ReportFilters = {}): Promise<ProductStats[]> {
+	const eventIds = await getFilteredEventIds(db, filters);
+	
+	// Get all products
+	const products = await db.select().from(table.product);
+
+	// Get user counts per product
+	const userCounts = await db
+		.select({
+			positionId: table.user.positionId,
+			count: count()
+		})
+		.from(table.user)
+		.where(eq(table.user.role, 'user'))
+		.groupBy(table.user.positionId);
+
+	const userCountMap = new Map(userCounts.map(u => [u.positionId, u.count]));
+
+	// Get attendance counts per position
+	const attendanceConditions = [eq(table.user.role, 'user')];
+	if (eventIds.length > 0) {
+		attendanceConditions.push(inArray(table.attendance.eventId, eventIds));
+	}
+
+	const attendanceCounts = await db
+		.select({
+			positionId: table.user.positionId,
+			count: count()
+		})
+		.from(table.attendance)
+		.innerJoin(table.user, eq(table.attendance.userId, table.user.id))
+		.where(and(...attendanceConditions))
+		.groupBy(table.user.positionId);
+
+	const attendanceMap = new Map(attendanceCounts.map(a => [a.positionId, a.count]));
+
+	const result: ProductStats[] = products.map(product => {
+		const totalUsers = userCountMap.get(product.id) ?? 0;
+		const totalAttendances = attendanceMap.get(product.id) ?? 0;
+		const totalExpected = eventIds.length * totalUsers;
+		const averageRate = totalExpected > 0 ? (totalAttendances / totalExpected) * 100 : 0;
+
+		return {
+			positionId: product.id,
+			productName: product.name,
+			totalUsers,
+			totalAttendances,
+			averageAttendanceRate: Math.round(averageRate * 10) / 10
+		};
+	});
+
+	// Add users without position
+	const noPositionUsers = userCountMap.get(null) ?? 0;
+	const noPositionAttendances = attendanceMap.get(null) ?? 0;
 
 	result.push({
-		productId: null,
+		positionId: null,
 		productName: 'Sem cargo',
-		totalUsers: noProductUsers?.count ?? 0,
-		totalAttendances: filteredNoProductAttendances.length,
+		totalUsers: noPositionUsers,
+		totalAttendances: noPositionAttendances,
 		averageAttendanceRate: 0
 	});
 
@@ -466,7 +507,11 @@ export async function getMonthlyTrends(db: Database, filters: ReportFilters = {}
 	];
 
 	let events = await db
-		.select()
+		.select({
+			id: table.event.id,
+			dateTime: table.event.dateTime,
+			expectedAttendees: table.event.expectedAttendees
+		})
 		.from(table.event)
 		.where(and(...conditions))
 		.orderBy(table.event.dateTime);
@@ -480,6 +525,29 @@ export async function getMonthlyTrends(db: Database, filters: ReportFilters = {}
 		events = events.filter(e => eventIds.has(e.id));
 	}
 
+	if (events.length === 0) {
+		return [];
+	}
+
+	const eventIds = events.map(e => e.id);
+
+	// Get all attendance counts in one query
+	const attendanceCounts = await db
+		.select({
+			eventId: table.attendance.eventId,
+			count: count()
+		})
+		.from(table.attendance)
+		.innerJoin(table.user, eq(table.attendance.userId, table.user.id))
+		.where(and(
+			inArray(table.attendance.eventId, eventIds),
+			eq(table.user.role, 'user')
+		))
+		.groupBy(table.attendance.eventId);
+
+	const attendanceMap = new Map(attendanceCounts.map(a => [a.eventId, a.count]));
+
+	// Aggregate by month
 	const monthlyData = new Map<string, { events: number; attendees: number; expected: number }>();
 
 	for (const event of events) {
@@ -492,17 +560,7 @@ export async function getMonthlyTrends(db: Database, filters: ReportFilters = {}
 		const data = monthlyData.get(monthKey)!;
 		data.events++;
 		data.expected += event.expectedAttendees;
-
-		const [attendanceResult] = await db
-			.select({ count: count() })
-			.from(table.attendance)
-			.innerJoin(table.user, eq(table.attendance.userId, table.user.id))
-			.where(and(
-				eq(table.attendance.eventId, event.id),
-				eq(table.user.role, 'user') // Exclui administradores
-			));
-
-		data.attendees += attendanceResult?.count ?? 0;
+		data.attendees += attendanceMap.get(event.id) ?? 0;
 	}
 
 	return Array.from(monthlyData.entries()).map(([month, data]) => ({
@@ -514,7 +572,7 @@ export async function getMonthlyTrends(db: Database, filters: ReportFilters = {}
 }
 
 export async function getDetailedAttendances(db: Database, filters: ReportFilters = {}): Promise<DetailedAttendance[]> {
-	const { fromDate, toDate, categoryId, productId } = filters;
+	const { fromDate, toDate, categoryId, positionId } = filters;
 
 	const eventConditions = [eq(table.event.isActive, true)];
 	if (fromDate) eventConditions.push(gte(table.event.dateTime, fromDate));
@@ -535,66 +593,70 @@ export async function getDetailedAttendances(db: Database, filters: ReportFilter
 		events = events.filter(e => eventIds.has(e.id));
 	}
 
-	const result: DetailedAttendance[] = [];
-
-	for (const event of events) {
-		// Get categories for this event
-		const eventCategories = await db
-			.select({ name: table.category.name })
-			.from(table.eventCategory)
-			.innerJoin(table.category, eq(table.eventCategory.categoryId, table.category.id))
-			.where(eq(table.eventCategory.eventId, event.id));
-		
-		const categoriesStr = eventCategories.map(c => c.name).join(', ');
-
-		// Get attendances for this event (excluding admins)
-		const attendances = await db
-			.select({
-				userName: table.user.username,
-				userEmail: table.user.email,
-				userPhone: table.user.phone,
-				userCompany: table.user.companyName,
-				productId: table.user.productId,
-				confirmedAt: table.attendance.confirmedAt
-			})
-			.from(table.attendance)
-			.innerJoin(table.user, eq(table.attendance.userId, table.user.id))
-			.where(and(
-				eq(table.attendance.eventId, event.id),
-				eq(table.user.role, 'user')
-			))
-			.orderBy(asc(table.attendance.confirmedAt));
-
-		for (const attendance of attendances) {
-			// Filter by productId if specified
-			if (productId && attendance.productId !== productId) {
-				continue;
-			}
-
-			// Get product/function name
-			let functionName: string | null = null;
-			if (attendance.productId) {
-				const [product] = await db
-					.select({ name: table.product.name })
-					.from(table.product)
-					.where(eq(table.product.id, attendance.productId));
-				functionName = product?.name ?? null;
-			}
-
-			result.push({
-				userName: attendance.userName,
-				userEmail: attendance.userEmail,
-				userPhone: attendance.userPhone,
-				userCompany: attendance.userCompany,
-				userFunction: functionName,
-				eventName: event.name,
-				eventDate: event.dateTime,
-				eventEndTime: event.endTime,
-				eventCategories: categoriesStr,
-				confirmedAt: attendance.confirmedAt
-			});
-		}
+	if (events.length === 0) {
+		return [];
 	}
 
-	return result;
+	const eventIds = events.map(e => e.id);
+	const eventMap = new Map(events.map(e => [e.id, e]));
+
+	// Get all categories for all events in one query
+	const allEventCategories = await db
+		.select({
+			eventId: table.eventCategory.eventId,
+			name: table.category.name
+		})
+		.from(table.eventCategory)
+		.innerJoin(table.category, eq(table.eventCategory.categoryId, table.category.id))
+		.where(inArray(table.eventCategory.eventId, eventIds));
+
+	const categoriesMap = new Map<string, string[]>();
+	for (const cat of allEventCategories) {
+		if (!categoriesMap.has(cat.eventId)) {
+			categoriesMap.set(cat.eventId, []);
+		}
+		categoriesMap.get(cat.eventId)!.push(cat.name);
+	}
+
+	// Get all attendances with user and product info in one query
+	const attendanceConditions = [
+		inArray(table.attendance.eventId, eventIds),
+		eq(table.user.role, 'user')
+	];
+	if (positionId) {
+		attendanceConditions.push(eq(table.user.positionId, positionId));
+	}
+
+	const attendances = await db
+		.select({
+			eventId: table.attendance.eventId,
+			userName: table.user.username,
+			userEmail: table.user.email,
+			userPhone: table.user.phone,
+			userCompany: table.user.companyName,
+			positionId: table.user.positionId,
+			productName: table.product.name,
+			confirmedAt: table.attendance.confirmedAt
+		})
+		.from(table.attendance)
+		.innerJoin(table.user, eq(table.attendance.userId, table.user.id))
+		.leftJoin(table.product, eq(table.user.positionId, table.product.id))
+		.where(and(...attendanceConditions))
+		.orderBy(asc(table.attendance.confirmedAt));
+
+	return attendances.map(att => {
+		const event = eventMap.get(att.eventId)!;
+		return {
+			userName: att.userName,
+			userEmail: att.userEmail,
+			userPhone: att.userPhone,
+			userCompany: att.userCompany,
+			userFunction: att.productName,
+			eventName: event.name,
+			eventDate: event.dateTime,
+			eventEndTime: event.endTime,
+			eventCategories: (categoriesMap.get(att.eventId) ?? []).join(', '),
+			confirmedAt: att.confirmedAt
+		};
+	});
 }

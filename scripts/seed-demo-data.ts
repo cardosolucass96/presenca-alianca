@@ -147,7 +147,7 @@ async function seedDemoData() {
 			phone,
 			username: fullName,
 			companyName: company,
-			productId: product.id,
+			positionId: product.id,
 			passwordHash,
 			role: 'user'
 		});
