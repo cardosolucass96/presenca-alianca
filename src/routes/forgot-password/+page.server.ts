@@ -14,7 +14,30 @@ export const actions: Actions = {
 		const identifier = formData.get('identifier') as string;
 
 		if (!identifier) {
-			return fail(400, { error: 'Email ou telefone é obrigatório', identifier });
+			return fail(400, { error: 'Email ou telefone é obrigatório', identifier: '' });
+		}
+
+		// Detecta se é email ou telefone
+		const isEmail = identifier.includes('@');
+		
+		if (isEmail) {
+			// Validação de email
+			if (identifier.length > 255) {
+				return fail(400, { error: 'Email inválido', identifier });
+			}
+		} else {
+			// Validação de telefone
+			const phoneDigits = identifier.replace(/\D/g, '');
+			
+			// Remove o 55 do código do país se presente
+			const cleanPhone = phoneDigits.startsWith('55') ? phoneDigits.slice(2) : phoneDigits;
+			
+			if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+				return fail(400, { 
+					error: 'Telefone inválido. Use o formato +55 (DD) 9XXXX-XXXX', 
+					identifier 
+				});
+			}
 		}
 
 		// Busca usuário por email ou telefone
