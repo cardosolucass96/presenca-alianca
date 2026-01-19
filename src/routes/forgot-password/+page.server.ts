@@ -78,7 +78,7 @@ export const actions: Actions = {
 				const resend = new Resend(platform.env.RESEND_API_KEY);
 
 				await resend.emails.send({
-					from: 'Presença Aliança <noreply@presenca-alianca.com>',
+					from: 'Presença Aliança <noreply@presenca-alianca.cardosolucas.com>',
 					to: user.email,
 					subject: 'Recuperação de Senha - Presença Aliança',
 					html: `

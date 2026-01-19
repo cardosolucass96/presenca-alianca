@@ -46,7 +46,7 @@ Para enviar emails de produção, você precisa verificar seu domínio no Resend
 4. Aguarde a verificação (pode levar alguns minutos)
 5. Atualize o campo `from` no código se necessário
 
-Atualmente configurado como: `noreply@presenca-alianca.com`
+Atualmente configurado como: `noreply@presenca-alianca.cardosolucas.com`
 
 ## Funcionalidades que usam email
 
