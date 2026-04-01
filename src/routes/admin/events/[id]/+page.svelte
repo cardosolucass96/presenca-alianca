@@ -148,7 +148,7 @@
 		<Alert variant="error" message={form.error} class="mb-6" />
 	{/if}
 
-	{#if form?.success && !form?.toggled && !form?.enrolled}
+	{#if form?.success && !form?.toggled && !form?.enrolled && !form?.unenrolled}
 		<Alert variant="success" message="Evento atualizado com sucesso!" class="mb-6" />
 	{/if}
 
@@ -415,7 +415,7 @@
 													if (!confirm(`Remover ${user.username} do evento?`)) {
 														return ({ cancel }: any) => cancel();
 													}
-													return async ({ update }: any) => { await update(); };
+													return async ({ update }: any) => { await update({ invalidateAll: true }); };
 												}}
 											>
 												<input type="hidden" name="userId" value={user.id} />
