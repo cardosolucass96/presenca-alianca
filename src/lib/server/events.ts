@@ -126,10 +126,7 @@ export async function getEventAttendees(db: Database, eventId: string) {
 		.from(table.attendance)
 		.innerJoin(table.user, eq(table.attendance.userId, table.user.id))
 		.leftJoin(table.product, eq(table.user.productId, table.product.id))
-		.where(and(
-			eq(table.attendance.eventId, eventId),
-			eq(table.user.role, 'user') // Exclui administradores
-		));
+		.where(eq(table.attendance.eventId, eventId));
 }
 
 export async function getEventAttendeesCount(db: Database, eventId: string) {
@@ -137,10 +134,7 @@ export async function getEventAttendeesCount(db: Database, eventId: string) {
 		.select({ count: sql<number>`count(*)` })
 		.from(table.attendance)
 		.innerJoin(table.user, eq(table.attendance.userId, table.user.id))
-		.where(and(
-			eq(table.attendance.eventId, eventId),
-			eq(table.user.role, 'user') // Exclui administradores
-		));
+		.where(eq(table.attendance.eventId, eventId));
 	return result?.count ?? 0;
 }
 
