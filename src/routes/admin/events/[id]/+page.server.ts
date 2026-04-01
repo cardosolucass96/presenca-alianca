@@ -130,5 +130,21 @@ export const actions: Actions = {
 		} catch {
 			return fail(500, { error: 'Erro ao inscrever usuário' });
 		}
+	},
+
+	unenroll: async ({ request, params, locals }) => {
+		const formData = await request.formData();
+		const userId = formData.get('userId');
+
+		if (typeof userId !== 'string' || !userId) {
+			return fail(400, { error: 'Usuário inválido' });
+		}
+
+		try {
+			await events.removeAttendance(locals.db, params.id, userId);
+			return { success: true, unenrolled: true };
+		} catch {
+			return fail(500, { error: 'Erro ao remover participante' });
+		}
 	}
 };

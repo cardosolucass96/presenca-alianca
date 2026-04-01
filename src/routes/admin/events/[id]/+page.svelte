@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Calendar, Pencil, FileText } from 'lucide-svelte';
+	import { Calendar, Pencil, FileText, Trash2 } from 'lucide-svelte';
 	import { Alert, AdminPage, EmptyState } from '$lib';
 	import { formatDate } from '$lib/utils/formatters';
 	import EventReportPrint from '$lib/components/reports/EventReportPrint.svelte';
@@ -154,6 +154,10 @@
 
 	{#if form?.success && form?.enrolled}
 		<Alert variant="success" message="Usuário inscrito com sucesso!" class="mb-6" />
+	{/if}
+
+	{#if form?.success && form?.unenrolled}
+		<Alert variant="success" message="Participante removido com sucesso!" class="mb-6" />
 	{/if}
 
 	<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -392,6 +396,7 @@
 									<th>Produto</th>
 									<th>Email</th>
 									<th>Confirmado em</th>
+									<th></th>
 								</tr>
 							</thead>
 							<tbody>
@@ -402,6 +407,23 @@
 										<td>{productName || '-'}</td>
 										<td>{user.email}</td>
 										<td>{formatDate(attendance.confirmedAt, { includeTime: true })}</td>
+										<td>
+											<form
+												method="POST"
+												action="?/unenroll"
+												use:enhance={() => {
+													if (!confirm(`Remover ${user.username} do evento?`)) {
+														return ({ cancel }: any) => cancel();
+													}
+													return async ({ update }: any) => { await update(); };
+												}}
+											>
+												<input type="hidden" name="userId" value={user.id} />
+												<button type="submit" class="btn btn-sm preset-outlined-error-500" title="Remover participante">
+													<Trash2 class="w-4 h-4" />
+												</button>
+											</form>
+										</td>
 									</tr>
 								{/each}
 							</tbody>
