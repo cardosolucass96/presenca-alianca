@@ -11,6 +11,39 @@
 	let showReport = $state(false);
 	let showEnrollForm = $state(false);
 
+	// Enrollment search
+	let enrollSearch = $state('');
+	let selectedUserId = $state('');
+	let enrollDropdownOpen = $state(false);
+
+	const filteredUsers = $derived(
+		data.availableUsers.filter((user: any) => {
+			if (!enrollSearch) return true;
+			const q = enrollSearch.toLowerCase();
+			return (
+				user.username.toLowerCase().includes(q) ||
+				user.companyName?.toLowerCase().includes(q) ||
+				user.email.toLowerCase().includes(q)
+			);
+		})
+	);
+
+	function selectUser(user: any) {
+		selectedUserId = user.id;
+		enrollSearch = `${user.username} - ${user.companyName}`;
+		enrollDropdownOpen = false;
+	}
+
+	function clearEnrollSelection() {
+		selectedUserId = '';
+		enrollSearch = '';
+		enrollDropdownOpen = false;
+	}
+
+	function handleEnrollBlur() {
+		setTimeout(() => { enrollDropdownOpen = false; }, 150);
+	}
+
 	// Normalizar categorias (suporta ambos formatos possíveis)
 	function normalizeCategories() {
 		return data.categories.map((c: any) => ({
@@ -433,24 +466,58 @@
 							return async ({ update }) => {
 								await update();
 								showEnrollForm = false;
+								clearEnrollSelection();
 							};
 						}}
 						class="space-y-4"
 					>
-						<label class="label">
+						<input type="hidden" name="userId" value={selectedUserId} />
+						<div class="label">
 							<span>Selecionar Usuário</span>
-							<select name="userId" class="select" required>
-								<option value="">Escolher usuário...</option>
-								{#each data.availableUsers as user}
-									<option value={user.id}>
-										{user.username} - {user.companyName} ({user.email})
-									</option>
-								{/each}
-							</select>
-						</label>
+							<div class="relative">
+								<input
+									type="text"
+									class="input w-full"
+									placeholder="Buscar por nome, empresa ou email..."
+									bind:value={enrollSearch}
+									onfocus={() => enrollDropdownOpen = true}
+									onblur={handleEnrollBlur}
+									oninput={() => { selectedUserId = ''; enrollDropdownOpen = true; }}
+									autocomplete="off"
+								/>
+								{#if selectedUserId}
+									<button
+										type="button"
+										class="absolute right-2 top-1/2 -translate-y-1/2 text-surface-500 hover:text-surface-700"
+										onclick={clearEnrollSelection}
+									>
+										✕
+									</button>
+								{/if}
+								{#if enrollDropdownOpen && !selectedUserId}
+									<div class="absolute z-50 w-full mt-1 max-h-48 overflow-y-auto rounded-lg border border-surface-200-800 bg-surface-100-900 shadow-lg">
+										{#if filteredUsers.length === 0}
+											<div class="p-3 text-sm text-surface-500 text-center">Nenhum usuário encontrado</div>
+										{:else}
+											{#each filteredUsers as user}
+												<button
+													type="button"
+													class="w-full text-left px-3 py-2 text-sm hover:bg-surface-200-800 transition-colors"
+													onclick={() => selectUser(user)}
+												>
+													<span class="font-medium">{user.username}</span>
+													<span class="text-surface-500"> - {user.companyName}</span>
+													<span class="text-surface-400 text-xs block">{user.email}</span>
+												</button>
+											{/each}
+										{/if}
+									</div>
+								{/if}
+							</div>
+						</div>
 
 						<div class="flex gap-2">
-							<button type="submit" class="btn preset-filled-primary-500 btn-sm">
+							<button type="submit" class="btn preset-filled-primary-500 btn-sm" disabled={!selectedUserId}>
 								Inscrever
 							</button>
 							<button
