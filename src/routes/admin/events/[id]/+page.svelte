@@ -9,6 +9,7 @@
 
 	let isEditing = $state(false);
 	let showReport = $state(false);
+	let showEnrollForm = $state(false);
 
 	// Normalizar categorias (suporta ambos formatos possíveis)
 	function normalizeCategories() {
@@ -114,8 +115,12 @@
 		<Alert variant="error" message={form.error} class="mb-6" />
 	{/if}
 
-	{#if form?.success && !form?.toggled}
+	{#if form?.success && !form?.toggled && !form?.enrolled}
 		<Alert variant="success" message="Evento atualizado com sucesso!" class="mb-6" />
+	{/if}
+
+	{#if form?.success && form?.enrolled}
+		<Alert variant="success" message="Usuário inscrito com sucesso!" class="mb-6" />
 	{/if}
 
 	<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -413,7 +418,60 @@
 				</div>
 			</div>
 
-			<!-- Public Link -->
+			<!-- Manual Enrollment -->
+			<div class="card bg-surface-100-900 p-6 border border-surface-200-800">
+				<h3 class="h4 mb-4">Inscrição Manual</h3>
+				<p class="text-sm text-surface-600-400 mb-4">
+					Inscreva um usuário diretamente no evento:
+				</p>
+
+				{#if showEnrollForm}
+					<form
+						method="POST"
+						action="?/enroll"
+						use:enhance={() => {
+							return async ({ update }) => {
+								await update();
+								showEnrollForm = false;
+							};
+						}}
+						class="space-y-4"
+					>
+						<label class="label">
+							<span>Selecionar Usuário</span>
+							<select name="userId" class="select" required>
+								<option value="">Escolher usuário...</option>
+								{#each data.availableUsers as user}
+									<option value={user.id}>
+										{user.username} - {user.companyName} ({user.email})
+									</option>
+								{/each}
+							</select>
+						</label>
+
+						<div class="flex gap-2">
+							<button type="submit" class="btn preset-filled-primary-500 btn-sm">
+								Inscrever
+							</button>
+							<button
+								type="button"
+								class="btn preset-outlined-surface-500 btn-sm"
+								onclick={() => showEnrollForm = false}
+							>
+								Cancelar
+							</button>
+						</div>
+					</form>
+				{:else}
+					<button
+						class="btn preset-filled-primary-500 w-full"
+						onclick={() => showEnrollForm = true}
+						disabled={data.availableUsers.length === 0}
+					>
+						{data.availableUsers.length === 0 ? 'Todos inscritos' : 'Inscrever Usuário'}
+					</button>
+				{/if}
+			</div>
 			<div class="card bg-surface-100-900 p-6 border border-surface-200-800">
 				<h3 class="h4 mb-4">Link Público</h3>
 				<p class="text-sm text-surface-600-400 mb-4">

@@ -2,6 +2,7 @@ import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import * as events from '$lib/server/events';
 import * as categories from '$lib/server/categories';
+import * as users from '$lib/server/users';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const event = await events.getEventById(locals.db, params.id);
@@ -17,12 +18,18 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	]);
 	const attendeesCount = attendees.length;
 
+	// Get all users for manual enrollment
+	const allUsers = await users.getAllUsers(locals.db);
+	const attendeeUserIds = new Set(attendees.map(a => a.user.id));
+	const availableUsers = allUsers.filter(user => !attendeeUserIds.has(user.id));
+
 	return {
 		event,
 		categories: eventCategories,
 		allCategories,
 		attendees,
-		attendeesCount
+		attendeesCount,
+		availableUsers
 	};
 };
 
@@ -106,6 +113,22 @@ export const actions: Actions = {
 			return { success: true, toggled: true };
 		} catch {
 			return fail(500, { error: 'Erro ao atualizar status' });
+		}
+	},
+
+	enroll: async ({ request, params, locals }) => {
+		const formData = await request.formData();
+		const userId = formData.get('userId');
+
+		if (typeof userId !== 'string' || !userId) {
+			return fail(400, { error: 'Usuário inválido' });
+		}
+
+		try {
+			await events.confirmAttendance(locals.db, params.id, userId);
+			return { success: true, enrolled: true };
+		} catch {
+			return fail(500, { error: 'Erro ao inscrever usuário' });
 		}
 	}
 };
