@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Calendar, Clock, Users, CheckCircle, AlertTriangle, Video, LogIn, UserPlus, Loader2 } from 'lucide-svelte';
+	import { Calendar, Clock, CheckCircle, AlertTriangle, Video, LogIn, UserPlus, Loader2 } from 'lucide-svelte';
 	import { Alert } from '$lib';
 
 	let { data, form } = $props();
@@ -97,19 +97,6 @@
 			{/if}
 		</div>
 
-		<div class="flex justify-center gap-8 mb-6">
-			<div class="text-center">
-				<div class="flex items-center justify-center gap-2 text-2xl font-bold text-primary-400">
-					<Users class="w-6 h-6" />
-					{data.attendeesCount}
-				</div>
-				<p class="text-sm text-surface-600-400">Confirmados</p>
-			</div>
-			<div class="text-center">
-				<p class="text-2xl font-bold">{data.event.expectedAttendees}</p>
-				<p class="text-sm text-surface-600-400">Esperados</p>
-			</div>
-		</div>
 
 		{#if isEventPast()}
 			<Alert variant="warning" message="Este evento já aconteceu." />
