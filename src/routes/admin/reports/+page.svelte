@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { navigating } from '$app/state';
 	import { onMount } from 'svelte';
+
+	const isLoading = $derived(!!navigating.to);
 	import {
 		BarChart3,
 		Users,
@@ -646,6 +649,47 @@
 
 <AdminPage icon={BarChart3} title="Relatórios e Analytics" subtitle="Análise de presença e engajamento">
 
+	{#if isLoading}
+		<!-- Skeleton Loading -->
+		<div class="animate-pulse space-y-6">
+			<!-- Filter bar skeleton -->
+			<div class="h-14 bg-surface-200-800 rounded-xl"></div>
+
+			<!-- Stats skeleton -->
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+				{#each Array(5) as _}
+					<div class="card bg-surface-100-900 border border-surface-200-800 p-6 flex items-center gap-4">
+						<div class="w-12 h-12 rounded-xl bg-surface-300-700"></div>
+						<div class="flex-1 space-y-2">
+							<div class="h-3 bg-surface-300-700 rounded w-3/4"></div>
+							<div class="h-6 bg-surface-300-700 rounded w-1/2"></div>
+						</div>
+					</div>
+				{/each}
+			</div>
+
+			<!-- Charts skeleton -->
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+				{#each Array(2) as _}
+					<div class="card bg-surface-100-900 border border-surface-200-800 p-6 space-y-3">
+						<div class="h-4 bg-surface-300-700 rounded w-1/3"></div>
+						<div class="h-64 bg-surface-200-800 rounded-xl"></div>
+					</div>
+				{/each}
+			</div>
+
+			<!-- Table skeleton -->
+			<div class="card bg-surface-100-900 border border-surface-200-800 p-6 space-y-4">
+				<div class="h-4 bg-surface-300-700 rounded w-1/4"></div>
+				<div class="space-y-3">
+					{#each Array(6) as _}
+						<div class="h-10 bg-surface-200-800 rounded-lg"></div>
+					{/each}
+				</div>
+			</div>
+		</div>
+	{:else}
+
 	<!-- Sticky Filter Bar -->
 	<div class="sticky top-0 z-50 bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-lg mb-6">
 		<div class="px-4 py-3">
@@ -998,4 +1042,6 @@
 			<p class="text-surface-500 text-center py-8">Nenhum usuário cadastrado</p>
 		{/if}
 	</div>
+
+	{/if}
 </AdminPage>
