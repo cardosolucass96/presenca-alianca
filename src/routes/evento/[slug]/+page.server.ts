@@ -13,10 +13,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		error(404, 'Este evento não está mais disponível');
 	}
 
-	const [attendeesCount, eventCategories] = await Promise.all([
-		events.getEventAttendeesCount(locals.db, event.id),
-		events.getEventCategories(locals.db, event.id)
-	]);
+	const eventCategories = await events.getEventCategories(locals.db, event.id);
 	
 	let isAttending = false;
 	if (locals.user) {
@@ -26,7 +23,6 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	return {
 		event,
 		categories: eventCategories,
-		attendeesCount,
 		isAttending,
 		user: locals.user
 	};
