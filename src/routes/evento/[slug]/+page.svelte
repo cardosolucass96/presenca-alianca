@@ -97,14 +97,7 @@
 			{/if}
 		</div>
 
-		<div class="flex justify-center gap-8 mb-6">
-			<div class="text-center">
-				<p class="text-2xl font-bold">{data.event.expectedAttendees}</p>
-				<p class="text-sm text-surface-600-400">Esperados</p>
-			</div>
-		</div>
-
-		{#if isEventPast()}
+{#if isEventPast()}
 			<Alert variant="warning" message="Este evento já aconteceu." />
 		{:else if !data.user}
 			<div class="space-y-4">
