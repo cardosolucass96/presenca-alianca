@@ -156,6 +156,12 @@ export async function isUserAttending(db: Database, eventId: string, userId: str
 	return !!existing;
 }
 
+export async function removeAttendance(db: Database, eventId: string, userId: string) {
+	await db
+		.delete(table.attendance)
+		.where(and(eq(table.attendance.eventId, eventId), eq(table.attendance.userId, userId)));
+}
+
 export async function updateEvent(
 	db: Database,
 	id: string,

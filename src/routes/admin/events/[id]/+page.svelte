@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Calendar, Pencil, FileText } from 'lucide-svelte';
-	import { Alert, AdminPage, EmptyState } from '$lib';
+	import { Calendar, Pencil, FileText, Trash2 } from 'lucide-svelte';
+	import { Alert, AdminPage } from '$lib';
 	import { formatDate } from '$lib/utils/formatters';
 	import EventReportPrint from '$lib/components/reports/EventReportPrint.svelte';
 
@@ -9,6 +9,30 @@
 
 	let isEditing = $state(false);
 	let showReport = $state(false);
+	let showEnrollForm = $state(false);
+	let enrollSearch = $state('');
+	let selectedUserId = $state('');
+	let enrollDropdownOpen = $state(false);
+
+	type AvailableUser = {
+		id: string;
+		username: string;
+		companyName: string;
+		email: string;
+	};
+
+	const filteredUsers = $derived(
+		data.availableUsers.filter((user: AvailableUser) => {
+			if (!enrollSearch) return true;
+			const query = enrollSearch.toLowerCase();
+
+			return (
+				user.username.toLowerCase().includes(query) ||
+				user.companyName.toLowerCase().includes(query) ||
+				user.email.toLowerCase().includes(query)
+			);
+		})
+	);
 
 	// Normalizar categorias (suporta ambos formatos possíveis)
 	function normalizeCategories() {
@@ -37,7 +61,7 @@
 
 	const normalizedCategories = $derived(normalizeCategories());
 	const normalizedAttendees = $derived(normalizeAttendees());
-	
+
 	// Form state
 	let editName = $state(data.event.name);
 	let editDescription = $state(data.event.description || '');
@@ -103,6 +127,24 @@
 			editCategoryIds = [...editCategoryIds, categoryId];
 		}
 	}
+
+	function selectUser(user: AvailableUser) {
+		selectedUserId = user.id;
+		enrollSearch = `${user.username} - ${user.companyName}`;
+		enrollDropdownOpen = false;
+	}
+
+	function clearEnrollSelection() {
+		selectedUserId = '';
+		enrollSearch = '';
+		enrollDropdownOpen = false;
+	}
+
+	function handleEnrollBlur() {
+		setTimeout(() => {
+			enrollDropdownOpen = false;
+		}, 150);
+	}
 </script>
 
 <svelte:head>
@@ -114,8 +156,16 @@
 		<Alert variant="error" message={form.error} class="mb-6" />
 	{/if}
 
-	{#if form?.success && !form?.toggled}
+	{#if form?.success && !form?.toggled && !form?.enrolled && !form?.unenrolled}
 		<Alert variant="success" message="Evento atualizado com sucesso!" class="mb-6" />
+	{/if}
+
+	{#if form?.success && form?.enrolled}
+		<Alert variant="success" message="Usuário inscrito com sucesso!" class="mb-6" />
+	{/if}
+
+	{#if form?.success && form?.unenrolled}
+		<Alert variant="success" message="Participante removido com sucesso!" class="mb-6" />
 	{/if}
 
 	<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -354,6 +404,7 @@
 									<th>Cargo</th>
 									<th>Email</th>
 									<th>Confirmado em</th>
+									<th></th>
 								</tr>
 							</thead>
 							<tbody>
@@ -364,6 +415,31 @@
 										<td>{productName || '-'}</td>
 										<td>{user.email}</td>
 										<td>{formatDate(attendance.confirmedAt, { includeTime: true })}</td>
+										<td>
+											<form
+												method="POST"
+												action="?/unenroll"
+												use:enhance={({ cancel }) => {
+													if (!confirm(`Remover ${user.username} do evento?`)) {
+														cancel();
+														return;
+													}
+
+													return async ({ update }) => {
+														await update({ invalidateAll: true });
+													};
+												}}
+											>
+												<input type="hidden" name="userId" value={user.id} />
+												<button
+													type="submit"
+													class="btn btn-sm preset-outlined-error-500"
+													title="Remover participante"
+												>
+													<Trash2 class="w-4 h-4" />
+												</button>
+											</form>
+										</td>
 									</tr>
 								{/each}
 							</tbody>
@@ -411,6 +487,113 @@
 						></div>
 					</div>
 				</div>
+			</div>
+
+			<!-- Manual Enrollment -->
+			<div class="card bg-surface-100-900 p-6 border border-surface-200-800">
+				<h3 class="h4 mb-4">Inscrição Manual</h3>
+				<p class="text-sm text-surface-600-400 mb-4">
+					Inscreva um usuário diretamente no evento:
+				</p>
+
+				{#if showEnrollForm}
+					<form
+						method="POST"
+						action="?/enroll"
+						use:enhance={() => {
+							return async ({ result, update }) => {
+								await update({ invalidateAll: result.type === 'success' });
+
+								if (result.type === 'success') {
+									showEnrollForm = false;
+									clearEnrollSelection();
+								}
+							};
+						}}
+						class="space-y-4"
+					>
+						<input type="hidden" name="userId" value={selectedUserId} />
+						<div class="label">
+							<span>Selecionar Usuário</span>
+							<div class="relative">
+								<input
+									type="text"
+									class="input w-full"
+									placeholder="Buscar por nome, empresa ou email..."
+									bind:value={enrollSearch}
+									onfocus={() => (enrollDropdownOpen = true)}
+									onblur={handleEnrollBlur}
+									oninput={() => {
+										selectedUserId = '';
+										enrollDropdownOpen = true;
+									}}
+									autocomplete="off"
+								/>
+
+								{#if selectedUserId}
+									<button
+										type="button"
+										class="absolute right-2 top-1/2 -translate-y-1/2 text-surface-500 hover:text-surface-700"
+										onclick={clearEnrollSelection}
+										title="Limpar seleção"
+									>
+										x
+									</button>
+								{/if}
+
+								{#if enrollDropdownOpen && !selectedUserId}
+									<div class="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-surface-200-800 bg-surface-100-900 shadow-lg">
+										{#if filteredUsers.length === 0}
+											<div class="p-3 text-center text-sm text-surface-500">
+												Nenhum usuário encontrado
+											</div>
+										{:else}
+											{#each filteredUsers as user}
+												<button
+													type="button"
+													class="w-full px-3 py-2 text-left text-sm transition-colors hover:bg-surface-200-800"
+													onclick={() => selectUser(user)}
+												>
+													<span class="font-medium">{user.username}</span>
+													<span class="text-surface-500"> - {user.companyName}</span>
+													<span class="block text-xs text-surface-400">{user.email}</span>
+												</button>
+											{/each}
+										{/if}
+									</div>
+								{/if}
+							</div>
+						</div>
+
+						<div class="flex gap-2">
+							<button
+								type="submit"
+								class="btn btn-sm preset-filled-primary-500"
+								disabled={!selectedUserId}
+							>
+								Inscrever
+							</button>
+							<button
+								type="button"
+								class="btn btn-sm preset-outlined-surface-500"
+								onclick={() => {
+									showEnrollForm = false;
+									clearEnrollSelection();
+								}}
+							>
+								Cancelar
+							</button>
+						</div>
+					</form>
+				{:else}
+					<button
+						class="btn w-full preset-filled-primary-500"
+						onclick={() => (showEnrollForm = true)}
+						disabled={data.availableUsers.length === 0}
+					>
+						{data.availableUsers.length === 0 ? 'Todos inscritos' : 'Inscrever Usuário'}
+					</button>
+				{/if}
 			</div>
 
 			<!-- Public Link -->
