@@ -2,6 +2,7 @@ import { eq, desc, like, and, or, count } from 'drizzle-orm';
 import type { Database } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
 import { hashPassword } from './auth';
+import { cleanPhone, normalizeBrazilianPhone } from '$lib/utils';
 
 export async function getAllUsers(db: Database) {
 	return await db
@@ -72,7 +73,7 @@ export async function updateUser(
 	const updateData: Record<string, unknown> = {};
 	
 	if (data.email !== undefined) updateData.email = data.email.toLowerCase();
-	if (data.phone !== undefined) updateData.phone = data.phone ? data.phone.replace(/\D/g, '') : null;
+	if (data.phone !== undefined) updateData.phone = data.phone ? normalizeBrazilianPhone(data.phone) : null;
 	if (data.username !== undefined) updateData.username = data.username;
 	if (data.companyName !== undefined) updateData.companyName = data.companyName;
 	if (data.positionId !== undefined) updateData.positionId = data.positionId;
@@ -235,8 +236,11 @@ export async function searchUsers(db: Database, params: SearchUsersParams) {
 
 	if (email) conditions.push(like(table.user.email, `%${email}%`));
 	if (phone) {
-		const cleanPhone = phone.replace(/\D/g, '');
-		conditions.push(like(table.user.phone, `%${cleanPhone}%`));
+		const rawPhone = cleanPhone(phone);
+		const normalizedPhone = normalizeBrazilianPhone(phone);
+		const phonePatterns = [...new Set([rawPhone, normalizedPhone, normalizedPhone ? `55${normalizedPhone}` : ''])].filter(Boolean);
+		const phoneConditions = phonePatterns.map((pattern) => like(table.user.phone, `%${pattern}%`));
+		conditions.push(phoneConditions.length === 1 ? phoneConditions[0] : or(...phoneConditions));
 	}
 	if (companyName) conditions.push(like(table.user.companyName, `%${companyName}%`));
 	if (positionId) conditions.push(eq(table.user.positionId, positionId));

@@ -5,6 +5,7 @@ import * as products from '$lib/server/products';
 import { getUserByPhone } from '$lib/server/auth';
 import { createPasswordResetToken } from '$lib/server/passwordReset';
 import { sendPasswordResetLink } from '$lib/server/whatsapp';
+import { isValidBrazilianPhone, normalizeBrazilianPhone } from '$lib/utils';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const result = await users.getUserWithProduct(locals.db, params.id);
@@ -51,9 +52,9 @@ export const actions: Actions = {
 		// Validar telefone se fornecido
 		let cleanPhone: string | null = null;
 		if (typeof phone === 'string' && phone.trim()) {
-			cleanPhone = phone.replace(/\D/g, '');
-			if (cleanPhone.length < 10 || cleanPhone.length > 13) {
-				return fail(400, { error: 'Telefone deve ter entre 10 e 13 dígitos' });
+			cleanPhone = normalizeBrazilianPhone(phone);
+			if (!isValidBrazilianPhone(phone)) {
+				return fail(400, { error: 'Telefone deve ter DDD + número, com ou sem +55' });
 			}
 			const existingPhone = await getUserByPhone(locals.db, cleanPhone);
 			if (existingPhone && existingPhone.id !== params.id) {

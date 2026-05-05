@@ -1,9 +1,10 @@
 import type { RequestEvent } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { sha256 } from '@oslojs/crypto/sha2';
 import { encodeBase64url, encodeHexLowerCase } from '@oslojs/encoding';
 import type { Database } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
+import { cleanPhone, normalizeBrazilianPhone } from '$lib/utils';
 
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
 
@@ -14,6 +15,20 @@ export const sessionCookieName = 'auth-session';
 const PBKDF2_ITERATIONS = 100000;
 const SALT_LENGTH = 16;
 const KEY_LENGTH = 32;
+
+function getPhoneLookupCandidates(phone: string): string[] {
+	const rawDigits = cleanPhone(phone);
+	const normalizedPhone = normalizeBrazilianPhone(phone);
+	const candidates = new Set<string>();
+
+	if (rawDigits) candidates.add(rawDigits);
+	if (normalizedPhone) {
+		candidates.add(normalizedPhone);
+		candidates.add(`55${normalizedPhone}`);
+	}
+
+	return [...candidates];
+}
 
 export async function hashPassword(password: string): Promise<string> {
 	const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
@@ -130,7 +145,7 @@ export async function createUser(
 	await db.insert(table.user).values({
 		id: userId,
 		email: email.toLowerCase(),
-		phone: phone ? phone.replace(/\D/g, '') : null,
+		phone: phone ? normalizeBrazilianPhone(phone) : null,
 		username,
 		companyName,
 		positionId: positionId || null,
@@ -150,20 +165,27 @@ export async function getUserByEmail(db: Database, email: string) {
 }
 
 export async function getUserByPhone(db: Database, phone: string) {
-	const cleanPhone = phone.replace(/\D/g, '');
+	const candidates = getPhoneLookupCandidates(phone);
+
+	if (candidates.length === 0) {
+		return null;
+	}
+
 	const [user] = await db
 		.select()
 		.from(table.user)
-		.where(eq(table.user.phone, cleanPhone));
+		.where(inArray(table.user.phone, candidates));
 	return user ?? null;
 }
 
 export async function getUserByEmailOrPhone(db: Database, login: string) {
+	const normalizedLogin = login.trim();
+
 	// Se contém @ é email, senão tenta como telefone
-	if (login.includes('@')) {
-		return getUserByEmail(db, login);
+	if (normalizedLogin.includes('@')) {
+		return getUserByEmail(db, normalizedLogin);
 	}
-	return getUserByPhone(db, login);
+	return getUserByPhone(db, normalizedLogin);
 }
 
 // Session management

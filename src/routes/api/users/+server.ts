@@ -4,6 +4,7 @@ import * as apiKeys from '$lib/server/apiKeys';
 import { createUser, getUserByEmail, getUserByPhone } from '$lib/server/auth';
 import * as products from '$lib/server/products';
 import { searchUsers } from '$lib/server/users';
+import { isValidBrazilianPhone, normalizeBrazilianPhone } from '$lib/utils';
 
 // GET /api/users - List users with filters
 export const GET: RequestHandler = async ({ request, url, locals }) => {
@@ -119,9 +120,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		if (typeof phone !== 'string') {
 			errors.push('Telefone deve ser uma string');
 		} else {
-			cleanPhone = phone.replace(/\D/g, '');
-			if (cleanPhone.length < 10 || cleanPhone.length > 13) {
-				errors.push('Telefone deve ter entre 10 e 13 dígitos');
+			cleanPhone = normalizeBrazilianPhone(phone);
+			if (!isValidBrazilianPhone(phone)) {
+				errors.push('Telefone deve ter DDD + número, com ou sem +55');
 			}
 		}
 	}

@@ -3,6 +3,7 @@ import { fail } from '@sveltejs/kit';
 import * as users from '$lib/server/users';
 import * as products from '$lib/server/products';
 import { createUser, getUserByPhone } from '$lib/server/auth';
+import { isValidBrazilianPhone, normalizeBrazilianPhone } from '$lib/utils';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const [allUsers, allProducts] = await Promise.all([
@@ -47,9 +48,9 @@ export const actions: Actions = {
 		// Validar telefone se fornecido
 		let cleanPhone: string | undefined;
 		if (typeof phone === 'string' && phone.trim()) {
-			cleanPhone = phone.replace(/\D/g, '');
-			if (cleanPhone.length < 10 || cleanPhone.length > 13) {
-				return fail(400, { error: 'Telefone deve ter entre 10 e 13 dígitos' });
+			cleanPhone = normalizeBrazilianPhone(phone);
+			if (!isValidBrazilianPhone(phone)) {
+				return fail(400, { error: 'Telefone deve ter DDD + número, com ou sem +55' });
 			}
 			const existingPhone = await getUserByPhone(locals.db, cleanPhone);
 			if (existingPhone) {

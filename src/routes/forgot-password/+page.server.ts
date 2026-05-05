@@ -3,6 +3,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { getUserByEmailOrPhone } from '$lib/server/auth';
 import { createPasswordResetToken } from '$lib/server/passwordReset';
 import { sendPasswordResetLink } from '$lib/server/whatsapp';
+import { isValidBrazilianPhone } from '$lib/utils';
 
 export const load: PageServerLoad = async () => {
 	return {};
@@ -26,15 +27,9 @@ export const actions: Actions = {
 				return fail(400, { error: 'Email inválido', identifier });
 			}
 		} else {
-			// Validação de telefone
-			const phoneDigits = identifier.replace(/\D/g, '');
-			
-			// Remove o 55 do código do país se presente
-			const cleanPhone = phoneDigits.startsWith('55') ? phoneDigits.slice(2) : phoneDigits;
-			
-			if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+			if (!isValidBrazilianPhone(identifier)) {
 				return fail(400, { 
-					error: 'Telefone inválido. Use o formato +55 (DD) 9XXXX-XXXX', 
+					error: 'Telefone inválido. Use o formato +55 (DD) 9XXXX-XXXX ou (DD) 9XXXX-XXXX', 
 					identifier 
 				});
 			}

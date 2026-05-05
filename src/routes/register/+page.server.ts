@@ -2,6 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import * as auth from '$lib/server/auth';
 import * as products from '$lib/server/products';
+import { isValidBrazilianPhone, normalizeBrazilianPhone } from '$lib/utils';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (locals.user) {
@@ -56,9 +57,9 @@ export const actions: Actions = {
 		}
 
 		// Validação de telefone
-		const phoneDigits = phone.replace(/\D/g, '');
-		if (phoneDigits.length < 10 || phoneDigits.length > 11) {
-			return fail(400, { error: 'Telefone inválido. Use o formato (DD) 9XXXX-XXXX' });
+		const normalizedPhone = normalizeBrazilianPhone(phone);
+		if (!isValidBrazilianPhone(phone)) {
+			return fail(400, { error: 'Telefone inválido. Use o formato (DD) 9XXXX-XXXX, com ou sem +55' });
 		}
 
 		// Validação de email
@@ -80,6 +81,11 @@ export const actions: Actions = {
 			return fail(400, { error: 'Email já está em uso' });
 		}
 
+		const existingPhone = await auth.getUserByPhone(event.locals.db, normalizedPhone);
+		if (existingPhone) {
+			return fail(400, { error: 'Telefone já está em uso' });
+		}
+
 		try {
 			const userId = await auth.createUser(
 				event.locals.db,
@@ -89,13 +95,16 @@ export const actions: Actions = {
 				password,
 				'user',
 				typeof positionId === 'string' && positionId ? positionId : undefined,
-				phone
+				normalizedPhone
 			);
 			const token = auth.generateSessionToken();
 			const session = await auth.createSession(event.locals.db, token, userId);
 
 			auth.setSessionTokenCookie(event, token, session.expiresAt);
-		} catch {
+		} catch (e) {
+			if (e instanceof Error && e.message.includes('UNIQUE')) {
+				return fail(400, { error: 'Email ou telefone já estão em uso' });
+			}
 			return fail(500, { error: 'Erro ao criar conta. Tente novamente.' });
 		}
 

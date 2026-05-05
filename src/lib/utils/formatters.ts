@@ -66,8 +66,7 @@ export function formatRelativeDate(date: Date): string {
 export function formatPhone(phone: string | null | undefined): string {
 	if (!phone) return '-';
 
-	// Remove tudo que não é número
-	const digits = phone.replace(/\D/g, '');
+	const digits = normalizeBrazilianPhone(phone);
 
 	if (digits.length === 11) {
 		// Celular: (11) 99999-9999
@@ -88,6 +87,26 @@ export function formatPhone(phone: string | null | undefined): string {
  */
 export function cleanPhone(phone: string): string {
 	return phone.replace(/\D/g, '');
+}
+
+/**
+ * Normaliza telefone brasileiro para DDD + número, sem código do país.
+ * Aceita entrada com ou sem +55.
+ */
+export function normalizeBrazilianPhone(phone: string): string {
+	const digits = cleanPhone(phone);
+
+	// Remove o código do país apenas quando ele estiver de fato presente.
+	if (digits.length > 11 && digits.startsWith('55')) {
+		return digits.slice(2);
+	}
+
+	return digits;
+}
+
+export function isValidBrazilianPhone(phone: string): boolean {
+	const normalizedPhone = normalizeBrazilianPhone(phone);
+	return normalizedPhone.length >= 10 && normalizedPhone.length <= 11;
 }
 
 /**

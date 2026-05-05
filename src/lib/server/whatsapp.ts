@@ -1,3 +1,5 @@
+import { normalizeBrazilianPhone } from '$lib/utils';
+
 const EVOLUTION_API_URL = 'https://evolution-api.grupovorp.com';
 const INSTANCE_NAME = 'vorpbot';
 const API_KEY = '94902be9624521fd58cd50b220823a35';
@@ -21,13 +23,7 @@ export async function sendWhatsAppMessage(
 	phone: string,
 	message: string
 ): Promise<{ success: boolean; error?: string }> {
-	// Limpa o telefone e adiciona código do país se necessário
-	let cleanPhone = phone.replace(/\D/g, '');
-	
-	// Se não começar com 55, adiciona
-	if (!cleanPhone.startsWith('55')) {
-		cleanPhone = '55' + cleanPhone;
-	}
+	const cleanPhone = `55${normalizeBrazilianPhone(phone)}`;
 
 	try {
 		const response = await fetch(
