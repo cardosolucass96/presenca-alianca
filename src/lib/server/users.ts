@@ -2,7 +2,7 @@ import { eq, desc, like, and, or, count } from 'drizzle-orm';
 import type { Database } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
 import { hashPassword } from './auth';
-import { cleanPhone, normalizeBrazilianPhone } from '$lib/utils';
+import { getBrazilianPhoneLookupCandidates, normalizeBrazilianPhone } from '$lib/utils';
 
 export async function getAllUsers(db: Database) {
 	return await db
@@ -236,9 +236,7 @@ export async function searchUsers(db: Database, params: SearchUsersParams) {
 
 	if (email) conditions.push(like(table.user.email, `%${email}%`));
 	if (phone) {
-		const rawPhone = cleanPhone(phone);
-		const normalizedPhone = normalizeBrazilianPhone(phone);
-		const phonePatterns = [...new Set([rawPhone, normalizedPhone, normalizedPhone ? `55${normalizedPhone}` : ''])].filter(Boolean);
+		const phonePatterns = getBrazilianPhoneLookupCandidates(phone);
 		const phoneConditions = phonePatterns.map((pattern) => like(table.user.phone, `%${pattern}%`));
 		conditions.push(phoneConditions.length === 1 ? phoneConditions[0] : or(...phoneConditions));
 	}

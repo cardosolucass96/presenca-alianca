@@ -89,14 +89,7 @@ export function cleanPhone(phone: string): string {
 	return phone.replace(/\D/g, '');
 }
 
-/**
- * Normaliza telefone brasileiro para DDD + número, sem código do país.
- * Aceita entrada com ou sem +55.
- */
-export function normalizeBrazilianPhone(phone: string): string {
-	const digits = cleanPhone(phone);
-
-	// Remove o código do país apenas quando ele estiver de fato presente.
+function stripBrazilCountryCode(digits: string): string {
 	if (digits.length > 11 && digits.startsWith('55')) {
 		return digits.slice(2);
 	}
@@ -104,9 +97,62 @@ export function normalizeBrazilianPhone(phone: string): string {
 	return digits;
 }
 
+function addNinthDigitToMobile(digits: string): string {
+	if (digits.length === 10 && digits[2] === '9') {
+		return `${digits.slice(0, 2)}9${digits.slice(2)}`;
+	}
+
+	return digits;
+}
+
+function removeNinthDigitFromMobile(digits: string): string {
+	if (digits.length === 11 && digits[2] === '9') {
+		return `${digits.slice(0, 2)}${digits.slice(3)}`;
+	}
+
+	return digits;
+}
+
+/**
+ * Normaliza telefone brasileiro para DDD + número, sem código do país.
+ * Aceita entrada com ou sem +55 e canonicamente adiciona o 9o dígito
+ * quando o número móvel foi informado no formato antigo.
+ */
+export function normalizeBrazilianPhone(phone: string): string {
+	const digits = stripBrazilCountryCode(cleanPhone(phone));
+	return addNinthDigitToMobile(digits);
+}
+
 export function isValidBrazilianPhone(phone: string): boolean {
 	const normalizedPhone = normalizeBrazilianPhone(phone);
 	return normalizedPhone.length >= 10 && normalizedPhone.length <= 11;
+}
+
+export function getBrazilianPhoneLookupCandidates(phone: string): string[] {
+	const rawDigits = cleanPhone(phone);
+	const strippedDigits = stripBrazilCountryCode(rawDigits);
+	const normalizedPhone = normalizeBrazilianPhone(phone);
+	const candidates = new Set<string>();
+
+	const addCandidate = (digits: string) => {
+		if (!digits) return;
+
+		candidates.add(digits);
+		candidates.add(addNinthDigitToMobile(digits));
+		candidates.add(removeNinthDigitFromMobile(digits));
+	};
+
+	addCandidate(rawDigits);
+	addCandidate(strippedDigits);
+	addCandidate(normalizedPhone);
+
+	for (const candidate of [...candidates]) {
+		if (candidate.length >= 10 && candidate.length <= 11) {
+			candidates.add(`55${candidate}`);
+		}
+	}
+
+	return [...candidates].filter(Boolean);
 }
 
 /**

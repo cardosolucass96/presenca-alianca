@@ -4,7 +4,7 @@ import { sha256 } from '@oslojs/crypto/sha2';
 import { encodeBase64url, encodeHexLowerCase } from '@oslojs/encoding';
 import type { Database } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
-import { cleanPhone, normalizeBrazilianPhone } from '$lib/utils';
+import { getBrazilianPhoneLookupCandidates, normalizeBrazilianPhone } from '$lib/utils';
 
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
 
@@ -15,20 +15,6 @@ export const sessionCookieName = 'auth-session';
 const PBKDF2_ITERATIONS = 100000;
 const SALT_LENGTH = 16;
 const KEY_LENGTH = 32;
-
-function getPhoneLookupCandidates(phone: string): string[] {
-	const rawDigits = cleanPhone(phone);
-	const normalizedPhone = normalizeBrazilianPhone(phone);
-	const candidates = new Set<string>();
-
-	if (rawDigits) candidates.add(rawDigits);
-	if (normalizedPhone) {
-		candidates.add(normalizedPhone);
-		candidates.add(`55${normalizedPhone}`);
-	}
-
-	return [...candidates];
-}
 
 export async function hashPassword(password: string): Promise<string> {
 	const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
@@ -165,7 +151,7 @@ export async function getUserByEmail(db: Database, email: string) {
 }
 
 export async function getUserByPhone(db: Database, phone: string) {
-	const candidates = getPhoneLookupCandidates(phone);
+	const candidates = getBrazilianPhoneLookupCandidates(phone);
 
 	if (candidates.length === 0) {
 		return null;
