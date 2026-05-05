@@ -6,7 +6,6 @@
 	let { form } = $props();
 	let loading = $state(false);
 	let identifierValue = $state(form?.identifier ?? '');
-	let isPhone = $state(false);
 
 	function formatPhone(value: string) {
 		// Remove tudo exceto números
@@ -19,6 +18,10 @@
 		
 		// Limita a 11 dígitos (DDD + número)
 		numbers = numbers.slice(0, 11);
+
+		if (numbers.length === 0) {
+			return '';
+		}
 		
 		// Formata: +55 (DD) NNNNN-NNNN ou +55 (DD) NNNN-NNNN
 		let formatted = '+55 ';
@@ -53,10 +56,8 @@
 		
 		// Se contém @ é email, senão é telefone
 		if (hasAtSymbol) {
-			isPhone = false;
 			identifierValue = value;
 		} else if (phonePattern.test(value) || value.length === 0) {
-			isPhone = true;
 			const cursorPosition = input.selectionStart || 0;
 			const oldLength = identifierValue.length;
 			
@@ -70,7 +71,6 @@
 				input.setSelectionRange(cursorPosition + diff, cursorPosition + diff);
 			});
 		} else {
-			isPhone = false;
 			identifierValue = value;
 		}
 	}
@@ -121,7 +121,8 @@
 				/>
 			</label>
 			<p class="text-sm text-surface-500 mb-4">
-				Você receberá um link de recuperação por email e WhatsApp (se disponíveis).
+				Você receberá um link de recuperação por email e WhatsApp (se disponíveis). Se o telefone
+				não estiver cadastrado, tente seu email.
 			</p>
 
 			<button

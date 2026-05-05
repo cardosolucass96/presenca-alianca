@@ -38,10 +38,10 @@
 			<input
 				type="password"
 				name="password"
-				placeholder="Mínimo 6 caracteres"
+				placeholder="Mínimo 8 caracteres"
 				class="input"
 				required
-				minlength="6"
+				minlength="8"
 				disabled={loading}
 			/>
 		</label>
@@ -57,7 +57,7 @@
 				placeholder="Digite novamente"
 				class="input"
 				required
-				minlength="6"
+				minlength="8"
 				disabled={loading}
 			/>
 		</label>

@@ -24,8 +24,8 @@ export const actions: Actions = {
 		const password = formData.get('password') as string;
 		const confirmPassword = formData.get('confirmPassword') as string;
 
-		if (!password || password.length < 6) {
-			return fail(400, { error: 'A senha deve ter pelo menos 6 caracteres' });
+		if (!password || password.length < 8) {
+			return fail(400, { error: 'A senha deve ter pelo menos 8 caracteres' });
 		}
 
 		if (password !== confirmPassword) {

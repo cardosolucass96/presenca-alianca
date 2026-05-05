@@ -3,7 +3,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { getUserByEmailOrPhone } from '$lib/server/auth';
 import { createPasswordResetToken } from '$lib/server/passwordReset';
 import { sendPasswordResetLink } from '$lib/server/whatsapp';
-import { isValidBrazilianPhone } from '$lib/utils';
+import { cleanPhone, isValidBrazilianPhone } from '$lib/utils';
 
 export const load: PageServerLoad = async () => {
 	return {};
@@ -12,7 +12,7 @@ export const load: PageServerLoad = async () => {
 export const actions: Actions = {
 	default: async ({ request, url, locals, platform }) => {
 		const formData = await request.formData();
-		const identifier = formData.get('identifier') as string;
+		const identifier = (formData.get('identifier') as string)?.trim();
 
 		if (!identifier) {
 			return fail(400, { error: 'Email ou telefone é obrigatório', identifier: '' });
@@ -20,6 +20,7 @@ export const actions: Actions = {
 
 		// Detecta se é email ou telefone
 		const isEmail = identifier.includes('@');
+		const looksLikePhone = !isEmail && cleanPhone(identifier).length > 0;
 		
 		if (isEmail) {
 			// Validação de email
@@ -29,7 +30,7 @@ export const actions: Actions = {
 		} else {
 			if (!isValidBrazilianPhone(identifier)) {
 				return fail(400, { 
-					error: 'Telefone inválido. Use o formato +55 (DD) 9XXXX-XXXX ou (DD) 9XXXX-XXXX', 
+					error: 'Telefone inválido. Use o formato +55 (DD) 9XXXX-XXXX ou tente recuperar com seu email.', 
 					identifier 
 				});
 			}
@@ -42,7 +43,9 @@ export const actions: Actions = {
 			// Por segurança, não revelamos se o email/telefone existe ou não
 			return { 
 				success: true, 
-				message: 'Se o email ou telefone estiver cadastrado, você receberá um link de recuperação.',
+				message: looksLikePhone
+					? 'Se esse telefone estiver cadastrado, você receberá um link de recuperação. Se não estiver, tente também seu email.'
+					: 'Se o email ou telefone estiver cadastrado, você receberá um link de recuperação.',
 				identifier
 			};
 		}

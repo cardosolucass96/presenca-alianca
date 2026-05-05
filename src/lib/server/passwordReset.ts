@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { encodeBase64url } from '@oslojs/encoding';
 import type { Database } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
@@ -16,7 +16,21 @@ export function generateResetId(): string {
 	return encodeBase64url(bytes);
 }
 
+export async function invalidateOutstandingResetTokensForUser(db: Database, userId: string) {
+	await db
+		.update(table.passwordResetToken)
+		.set({ usedAt: new Date() })
+		.where(
+			and(
+				eq(table.passwordResetToken.userId, userId),
+				isNull(table.passwordResetToken.usedAt)
+			)
+		);
+}
+
 export async function createPasswordResetToken(db: Database, userId: string): Promise<string> {
+	await invalidateOutstandingResetTokensForUser(db, userId);
+
 	const id = generateResetId();
 	const token = generateResetToken();
 	const expiresAt = new Date(Date.now() + HOUR_IN_MS);
@@ -65,7 +79,9 @@ export async function resetPassword(db: Database, token: string, newPassword: st
 		.set({ passwordHash })
 		.where(eq(table.user.id, resetToken.userId));
 
-	await markTokenAsUsed(db, resetToken.id);
+	// Derruba sessões antigas e invalida qualquer outro link ainda aberto.
+	await db.delete(table.session).where(eq(table.session.userId, resetToken.userId));
+	await invalidateOutstandingResetTokensForUser(db, resetToken.userId);
 
 	return { success: true };
 }
