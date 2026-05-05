@@ -53,6 +53,9 @@
 					required
 				/>
 			</label>
+			<p class="text-sm text-surface-500 -mt-2">
+				Se o seu telefone ainda não estiver cadastrado, entre com seu email.
+			</p>
 
 			<label class="label">
 				<span class="flex items-center gap-2 mb-1">

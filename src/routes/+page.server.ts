@@ -1,6 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import * as auth from '$lib/server/auth';
+import { cleanPhone, isValidBrazilianPhone } from '$lib/utils';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (locals.user) {
@@ -32,13 +33,31 @@ export const actions: Actions = {
 			return fail(400, { error: 'Dados inválidos' });
 		}
 
-		if (!login || !password) {
+		const normalizedLogin = login.trim();
+
+		if (!normalizedLogin || !password) {
 			return fail(400, { error: 'Email/telefone e senha são obrigatórios' });
 		}
 
+		const isEmailLogin = normalizedLogin.includes('@');
+		const phoneDigits = cleanPhone(normalizedLogin);
+		const looksLikePhoneLogin = !isEmailLogin && phoneDigits.length > 0;
+
+		if (looksLikePhoneLogin && !isValidBrazilianPhone(normalizedLogin)) {
+			return fail(400, {
+				error: 'Telefone inválido. Se seu telefone não estiver cadastrado, tente entrar com seu email.'
+			});
+		}
+
 		// Buscar usuário por email ou telefone
-		const user = await auth.getUserByEmailOrPhone(event.locals.db, login);
+		const user = await auth.getUserByEmailOrPhone(event.locals.db, normalizedLogin);
 		if (!user) {
+			if (looksLikePhoneLogin) {
+				return fail(400, {
+					error: 'Não encontramos esse telefone no cadastro. Tente entrar com seu email.'
+				});
+			}
+
 			return fail(400, { error: 'Credenciais incorretas' });
 		}
 
