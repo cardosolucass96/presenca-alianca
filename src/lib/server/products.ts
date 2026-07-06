@@ -4,9 +4,40 @@ import type { Database } from '$lib/server/db';
 import { product } from '$lib/server/db/schema';
 import type { Product } from '$lib/server/db/schema';
 
+// Backfill de cargos obrigatórios para bases já existentes.
+const REQUIRED_PRODUCTS = [{ id: 'cargo_coordenador', name: 'Coordenador' }] as const;
+
 function generateProductId(): string {
 	const bytes = crypto.getRandomValues(new Uint8Array(10));
 	return encodeBase64url(bytes);
+}
+
+function normalizeProductName(name: string): string {
+	return name.trim().toLowerCase();
+}
+
+async function ensureRequiredProducts(db: Database): Promise<void> {
+	const existingProducts = await db.select().from(product);
+	const existingNames = new Set(existingProducts.map((item) => normalizeProductName(item.name)));
+
+	for (const requiredProduct of REQUIRED_PRODUCTS) {
+		if (existingNames.has(normalizeProductName(requiredProduct.name))) {
+			continue;
+		}
+
+		try {
+			await db.insert(product).values({
+				id: requiredProduct.id,
+				name: requiredProduct.name,
+				isActive: true
+			});
+			existingNames.add(normalizeProductName(requiredProduct.name));
+		} catch (error) {
+			if (!(error instanceof Error) || !error.message.includes('UNIQUE')) {
+				throw error;
+			}
+		}
+	}
 }
 
 export async function createProduct(db: Database, name: string): Promise<Product> {
@@ -24,6 +55,10 @@ export async function createProduct(db: Database, name: string): Promise<Product
 }
 
 export async function getAllProducts(db: Database, includeInactive = false): Promise<Product[]> {
+	if (!includeInactive) {
+		await ensureRequiredProducts(db);
+	}
+
 	if (includeInactive) {
 		return db.select().from(product).orderBy(desc(product.createdAt));
 	}
@@ -35,6 +70,8 @@ export async function getAllProducts(db: Database, includeInactive = false): Pro
 }
 
 export async function getActiveProducts(db: Database): Promise<Product[]> {
+	await ensureRequiredProducts(db);
+
 	return db
 		.select()
 		.from(product)

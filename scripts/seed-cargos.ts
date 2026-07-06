@@ -6,6 +6,7 @@ const cargos = [
 	'Vendedor',
 	'SDR / BDR',
 	'Supervisor',
+	'Coordenador',
 	'Gerente',
 	'Analista',
 	'Sócio'
