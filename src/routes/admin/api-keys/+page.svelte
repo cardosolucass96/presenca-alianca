@@ -218,6 +218,7 @@
 							<tr><td class="p-2"><code>slug</code></td><td class="p-2">string</td><td class="p-2">Filtro por slug</td></tr>
 							<tr><td class="p-2"><code>categoryId</code></td><td class="p-2">string</td><td class="p-2">Filtro por categoria</td></tr>
 							<tr><td class="p-2"><code>isActive</code></td><td class="p-2">boolean</td><td class="p-2">true ou false</td></tr>
+							<tr><td class="p-2"><code>registrationsClosed</code></td><td class="p-2">boolean</td><td class="p-2">true ou false</td></tr>
 							<tr><td class="p-2"><code>fromDate</code></td><td class="p-2">string</td><td class="p-2">Data mínima (ISO 8601)</td></tr>
 							<tr><td class="p-2"><code>toDate</code></td><td class="p-2">string</td><td class="p-2">Data máxima (ISO 8601)</td></tr>
 							<tr><td class="p-2"><code>limit</code></td><td class="p-2">number</td><td class="p-2">Máx. resultados (padrão: 50)</td></tr>
@@ -250,6 +251,7 @@
     "endTime": "2025-12-01T16:00:00.000Z",
     "meetLink": "https://meet.google.com/xxx",
     "expectedAttendees": 50,
+    "registrationsClosed": false,
     "isActive": true,
     "createdAt": "2025-11-01T10:00:00.000Z",
     "categories": [
@@ -282,6 +284,7 @@
   "endTime": "2025-12-01T16:00:00",              // obrigatório (ISO 8601)
   "meetLink": "https://meet.google.com/xxx",     // obrigatório
   "expectedAttendees": 50,                       // opcional (padrão: 0)
+  "registrationsClosed": false,                  // opcional (padrão: false)
   "categoryIds": ["cat1", "cat2"]                // opcional
 }`}</pre>
 				<p class="mt-2 text-surface-600-400">Resposta (201):</p>

@@ -126,6 +126,7 @@ GET /api/users?q=joao&companyName=Vorp&limit=10
 | `slug` | string | Filtro por slug |
 | `categoryId` | string | Filtro por categoria |
 | `isActive` | boolean | `true` ou `false` |
+| `registrationsClosed` | boolean | `true` ou `false` |
 | `fromDate` | string | Data mínima (ISO 8601) |
 | `toDate` | string | Data máxima (ISO 8601) |
 | `limit` | number | Máximo de resultados (padrão: 50, max: 100) |
@@ -150,6 +151,7 @@ GET /api/events?q=reuniao&isActive=true&fromDate=2025-01-01
       "endTime": "2025-12-01T16:00:00.000Z",
       "meetLink": "https://meet.google.com/xxx-xxxx-xxx",
       "expectedAttendees": 50,
+      "registrationsClosed": false,
       "isActive": true,
       "createdAt": "2025-01-01T00:00:00.000Z",
       "categories": [
@@ -175,6 +177,7 @@ GET /api/events?q=reuniao&isActive=true&fromDate=2025-01-01
   "endTime": "2025-12-01T16:00:00",
   "meetLink": "https://meet.google.com/xxx-xxxx-xxx",
   "expectedAttendees": 50,
+  "registrationsClosed": false,
   "categoryIds": ["cat1", "cat2"]
 }
 ```
@@ -187,6 +190,7 @@ GET /api/events?q=reuniao&isActive=true&fromDate=2025-01-01
 | `endTime` | string | ✅ | Data/hora de término (ISO 8601) |
 | `meetLink` | string | ✅ | Link do Google Meet |
 | `expectedAttendees` | number | ❌ | Participantes esperados (padrão: 0) |
+| `registrationsClosed` | boolean | ❌ | Bloqueia novas confirmações na página pública (padrão: `false`) |
 | `categoryIds` | string[] | ❌ | IDs das categorias |
 
 **Resposta (201):**

@@ -16,10 +16,10 @@ export function generateSlug(name: string): string {
 		.replace(/[^a-z0-9]+/g, '-')
 		.replace(/^-|-$/g, '')
 		.slice(0, 30);
-	
+
 	const random = crypto.getRandomValues(new Uint8Array(4));
 	const suffix = encodeBase64url(random).slice(0, 6).toLowerCase();
-	
+
 	return `${base}-${suffix}`;
 }
 
@@ -32,7 +32,8 @@ export async function createEvent(
 	expectedAttendees: number,
 	createdBy: string,
 	categoryIds: string[] = [],
-	description?: string
+	description?: string,
+	registrationsClosed = false
 ) {
 	const eventId = generateEventId();
 	const slug = generateSlug(name);
@@ -46,6 +47,7 @@ export async function createEvent(
 		endTime,
 		meetLink,
 		expectedAttendees,
+		registrationsClosed,
 		createdBy
 	});
 
@@ -94,12 +96,12 @@ export async function getActiveEvents(db: Database) {
 
 export async function confirmAttendance(db: Database, eventId: string, userId: string) {
 	const attendanceId = generateEventId();
-	
+
 	const [existing] = await db
 		.select()
 		.from(table.attendance)
 		.where(sql`${table.attendance.eventId} = ${eventId} AND ${table.attendance.userId} = ${userId}`);
-	
+
 	if (existing) return existing;
 
 	await db.insert(table.attendance).values({
@@ -172,15 +174,16 @@ export async function updateEvent(
 		endTime: Date;
 		meetLink: string;
 		expectedAttendees: number;
+		registrationsClosed: boolean;
 		isActive: boolean;
 	}>,
 	categoryIds?: string[]
 ) {
 	await db.update(table.event).set(data).where(eq(table.event.id, id));
-	
+
 	if (categoryIds !== undefined) {
 		await db.delete(table.eventCategory).where(eq(table.eventCategory.eventId, id));
-		
+
 		if (categoryIds.length > 0) {
 			await db.insert(table.eventCategory).values(
 				categoryIds.map(categoryId => ({
@@ -216,6 +219,7 @@ export interface SearchEventsParams {
 	slug?: string;
 	categoryId?: string;
 	isActive?: boolean;
+	registrationsClosed?: boolean;
 	fromDate?: Date;
 	toDate?: Date;
 	limit?: number;
@@ -223,7 +227,7 @@ export interface SearchEventsParams {
 }
 
 export async function searchEvents(db: Database, params: SearchEventsParams) {
-	const { query, name, slug, categoryId, isActive, fromDate, toDate, limit = 50, offset = 0 } = params;
+	const { query, name, slug, categoryId, isActive, registrationsClosed, fromDate, toDate, limit = 50, offset = 0 } = params;
 
 	const conditions = [];
 
@@ -241,6 +245,7 @@ export async function searchEvents(db: Database, params: SearchEventsParams) {
 	if (name) conditions.push(like(table.event.name, `%${name}%`));
 	if (slug) conditions.push(like(table.event.slug, `%${slug}%`));
 	if (isActive !== undefined) conditions.push(eq(table.event.isActive, isActive));
+	if (registrationsClosed !== undefined) conditions.push(eq(table.event.registrationsClosed, registrationsClosed));
 	if (fromDate) conditions.push(gte(table.event.dateTime, fromDate));
 	if (toDate) conditions.push(lte(table.event.dateTime, toDate));
 
@@ -249,7 +254,7 @@ export async function searchEvents(db: Database, params: SearchEventsParams) {
 			.select({ eventId: table.eventCategory.eventId })
 			.from(table.eventCategory)
 			.where(eq(table.eventCategory.categoryId, categoryId));
-		
+
 		conditions.push(sql`${table.event.id} IN (${eventIdsWithCategory})`);
 	}
 
@@ -270,6 +275,7 @@ export async function searchEvents(db: Database, params: SearchEventsParams) {
 			endTime: table.event.endTime,
 			meetLink: table.event.meetLink,
 			expectedAttendees: table.event.expectedAttendees,
+			registrationsClosed: table.event.registrationsClosed,
 			isActive: table.event.isActive,
 			createdAt: table.event.createdAt
 		})

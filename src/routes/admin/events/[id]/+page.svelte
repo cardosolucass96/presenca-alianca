@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Calendar, Pencil, FileText, Trash2 } from 'lucide-svelte';
+	import { Calendar, Pencil, FileText, Trash2, Lock } from 'lucide-svelte';
 	import { Alert, AdminPage } from '$lib';
 	import { formatDate } from '$lib/utils/formatters';
 	import EventReportPrint from '$lib/components/reports/EventReportPrint.svelte';
@@ -70,6 +70,7 @@
 	let editEndTime = $state(formatInputTime(data.event.endTime));
 	let editMeetLink = $state(data.event.meetLink);
 	let editExpectedAttendees = $state(data.event.expectedAttendees);
+	let editRegistrationsClosed = $state(data.event.registrationsClosed);
 	let editCategoryIds = $state<string[]>(normalizeCategories().map((c: { id: string }) => c.id));
 
 	function formatInputDate(date: Date) {
@@ -112,6 +113,7 @@
 		editEndTime = formatInputTime(data.event.endTime);
 		editMeetLink = data.event.meetLink;
 		editExpectedAttendees = data.event.expectedAttendees;
+		editRegistrationsClosed = data.event.registrationsClosed;
 		editCategoryIds = normalizeCategories().map((c: { id: string }) => c.id);
 		isEditing = true;
 	}
@@ -265,6 +267,28 @@
 							</label>
 
 							<label class="label md:col-span-2">
+								<span class="flex items-center gap-2">
+									<Lock class="w-4 h-4 text-surface-500" />
+									Status das inscrições
+								</span>
+								<div class="flex items-start gap-3 rounded-lg border border-surface-200-800 p-3">
+									<input
+										type="checkbox"
+										name="registrationsClosed"
+										value="true"
+										class="checkbox mt-1"
+										bind:checked={editRegistrationsClosed}
+									/>
+									<div>
+										<p class="font-medium">Inscrições encerradas</p>
+										<p class="text-xs text-surface-600-400">
+											Bloqueia novas confirmações na página pública, sem remover quem já confirmou.
+										</p>
+									</div>
+								</div>
+							</label>
+
+							<label class="label md:col-span-2">
 								<span>Descrição</span>
 								<textarea
 									name="description"
@@ -321,6 +345,9 @@
 						<div class="flex items-center gap-2">
 							{#if !data.event.isActive}
 								<span class="badge preset-filled-warning-500">Inativo</span>
+							{/if}
+							{#if data.event.registrationsClosed}
+								<span class="badge preset-filled-error-500">Inscrições encerradas</span>
 							{/if}
 							<button
 								class="btn btn-sm preset-outlined-primary-500"
@@ -379,6 +406,12 @@
 						<div>
 							<span class="text-surface-500">Pessoas Esperadas:</span>
 							<p class="font-medium">{data.event.expectedAttendees}</p>
+						</div>
+						<div>
+							<span class="text-surface-500">Inscrições:</span>
+							<p class="font-medium {data.event.registrationsClosed ? 'text-error-500' : 'text-success-500'}">
+								{data.event.registrationsClosed ? 'Encerradas' : 'Abertas'}
+							</p>
 						</div>
 					</div>
 				{/if}
@@ -462,6 +495,12 @@
 					<div class="flex justify-between">
 						<span class="text-surface-500">Esperados:</span>
 						<span class="font-medium">{data.event.expectedAttendees}</span>
+					</div>
+					<div class="flex justify-between">
+						<span class="text-surface-500">Inscrições:</span>
+						<span class="font-medium {data.event.registrationsClosed ? 'text-error-500' : 'text-success-500'}">
+							{data.event.registrationsClosed ? 'Encerradas' : 'Abertas'}
+						</span>
 					</div>
 					<div class="flex justify-between">
 						<span class="text-surface-500">Taxa:</span>

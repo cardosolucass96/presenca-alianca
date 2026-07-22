@@ -51,6 +51,7 @@ export const event = sqliteTable('event', {
 	endTime: integer('end_time', { mode: 'timestamp' }).notNull(),
 	meetLink: text('meet_link').notNull(),
 	expectedAttendees: integer('expected_attendees').notNull().default(0),
+	registrationsClosed: integer('registrations_closed', { mode: 'boolean' }).notNull().default(false),
 	createdBy: text('created_by').notNull().references(() => user.id),
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 	isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true)

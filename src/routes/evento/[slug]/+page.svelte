@@ -1,6 +1,16 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Calendar, Clock, CheckCircle, AlertTriangle, Video, LogIn, UserPlus, Loader2 } from 'lucide-svelte';
+	import {
+		Calendar,
+		Clock,
+		CheckCircle,
+		AlertTriangle,
+		Video,
+		LogIn,
+		UserPlus,
+		Loader2,
+		Lock
+	} from 'lucide-svelte';
 	import { Alert } from '$lib';
 
 	let { data, form } = $props();
@@ -84,6 +94,12 @@
 				<Clock class="w-5 h-5 text-primary-400" />
 				<span>{formatFullDate(data.event.dateTime)} - {formatTime(data.event.endTime)}</span>
 			</div>
+			{#if data.event.registrationsClosed && !(data.isAttending || form?.success)}
+				<div class="flex items-center justify-center gap-2 text-warning-500 mt-2 font-bold">
+					<Lock class="w-4 h-4" />
+					Inscrições encerradas
+				</div>
+			{/if}
 			{#if isEventOpen()}
 				<div class="flex items-center justify-center gap-2 text-success-500 mt-2 font-bold">
 					<div class="w-2 h-2 rounded-full bg-success-500 animate-pulse"></div>
@@ -97,31 +113,12 @@
 			{/if}
 		</div>
 
+		{#if form?.error}
+			<Alert variant="error" message={form.error} class="mb-4" />
+		{/if}
 
 		{#if isEventPast()}
 			<Alert variant="warning" message="Este evento já aconteceu." />
-		{:else if !data.user}
-			<div class="space-y-4">
-				<p class="text-center text-surface-600-400">
-					Faça login ou crie uma conta para confirmar sua presença e receber o link do meet.
-				</p>
-				<div class="flex gap-4">
-					<a
-						href="/login?redirect=/evento/{data.event.slug}"
-						class="btn preset-filled-primary-500 flex-1 flex items-center justify-center gap-2"
-					>
-						<LogIn class="w-4 h-4" />
-						Fazer Login
-					</a>
-					<a
-						href="/register?redirect=/evento/{data.event.slug}"
-						class="btn preset-outlined-primary-500 flex-1 flex items-center justify-center gap-2"
-					>
-						<UserPlus class="w-4 h-4" />
-						Criar Conta
-					</a>
-				</div>
-			</div>
 		{:else if data.isAttending || form?.success}
 			<div class="space-y-4">
 				<Alert variant="success">
@@ -151,9 +148,58 @@
 					</a>
 				</div>
 
-				<p class="text-center text-sm text-surface-600-400">
-					Olá, {data.user.username}! Nos vemos no evento.
+				{#if data.user}
+					<p class="text-center text-sm text-surface-600-400">
+						Olá, {data.user.username}! Nos vemos no evento.
+					</p>
+				{/if}
+			</div>
+		{:else if data.event.registrationsClosed}
+			<div class="space-y-4">
+				<Alert variant="warning" icon={Lock}>
+					<div class="flex flex-col items-center gap-2 text-center">
+						<p class="font-bold">Inscrições encerradas</p>
+						<p class="text-sm">
+							Não há mais vagas disponíveis para este evento.
+						</p>
+					</div>
+				</Alert>
+
+				{#if !data.user}
+					<a
+						href="/login?redirect=/evento/{data.event.slug}"
+						class="btn preset-outlined-primary-500 w-full flex items-center justify-center gap-2"
+					>
+						<LogIn class="w-4 h-4" />
+						Entrar para ver minha inscrição
+					</a>
+				{:else}
+					<p class="text-center text-sm text-surface-600-400">
+						Olá, {data.user.username}. As confirmações para este evento já foram encerradas.
+					</p>
+				{/if}
+			</div>
+		{:else if !data.user}
+			<div class="space-y-4">
+				<p class="text-center text-surface-600-400">
+					Faça login ou crie uma conta para confirmar sua presença e receber o link do meet.
 				</p>
+				<div class="flex gap-4">
+					<a
+						href="/login?redirect=/evento/{data.event.slug}"
+						class="btn preset-filled-primary-500 flex-1 flex items-center justify-center gap-2"
+					>
+						<LogIn class="w-4 h-4" />
+						Fazer Login
+					</a>
+					<a
+						href="/register?redirect=/evento/{data.event.slug}"
+						class="btn preset-outlined-primary-500 flex-1 flex items-center justify-center gap-2"
+					>
+						<UserPlus class="w-4 h-4" />
+						Criar Conta
+					</a>
+				</div>
 			</div>
 		{:else}
 			<div class="space-y-4">

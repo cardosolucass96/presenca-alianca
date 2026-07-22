@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Calendar, Clock, Users, Link, Plus, X, Eye, Trash2, Video, FileText } from 'lucide-svelte';
+	import { Calendar, Clock, Users, Link, Plus, X, Eye, Trash2, Video, FileText, Lock } from 'lucide-svelte';
 	import { Alert, AdminPage, EmptyState } from '$lib';
 	import { formatDate } from '$lib/utils/formatters';
 
@@ -127,6 +127,27 @@
 							min="0"
 						/>
 					</label>
+
+					<label class="label md:col-span-2">
+						<span class="flex items-center gap-2 mb-1">
+							<Lock class="w-4 h-4 text-surface-500" />
+							Status das inscrições
+						</span>
+						<div class="flex items-start gap-3 rounded-lg border border-surface-200-800 p-3">
+							<input
+								type="checkbox"
+								name="registrationsClosed"
+								value="true"
+								class="checkbox mt-1"
+							/>
+							<div>
+								<p class="font-medium">Criar com inscrições encerradas</p>
+								<p class="text-xs text-surface-600-400">
+									A página pública fica visível, mas não aceita novas confirmações.
+								</p>
+							</div>
+						</div>
+					</label>
 				</div>
 
 				{#if data.categories.length > 0}
@@ -185,6 +206,9 @@
 								<h3 class="h4">{event.name}</h3>
 								{#if !event.isActive}
 									<span class="badge preset-filled-warning-500 text-xs">Inativo</span>
+								{/if}
+								{#if event.registrationsClosed}
+									<span class="badge preset-filled-error-500 text-xs">Inscrições encerradas</span>
 								{/if}
 							</div>
 							{#if event.categories && event.categories.length > 0}

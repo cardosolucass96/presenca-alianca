@@ -16,7 +16,7 @@ export const GET: RequestHandler = async ({ request, params, locals }) => {
 
 	const token = authHeader.slice(7);
 	const apiKey = await apiKeys.validateApiKey(locals.db, token);
-	
+
 	if (!apiKey) {
 		return json(
 			{ error: 'Token de autorização inválido ou inativo' },
@@ -64,6 +64,7 @@ export const GET: RequestHandler = async ({ request, params, locals }) => {
 				endTime: event.endTime,
 				meetLink: event.meetLink,
 				expectedAttendees: event.expectedAttendees,
+				registrationsClosed: event.registrationsClosed,
 				isActive: event.isActive,
 				createdAt: event.createdAt,
 				categories,

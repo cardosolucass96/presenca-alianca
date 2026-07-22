@@ -1,6 +1,12 @@
-import { error, redirect } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import * as events from '$lib/server/events';
+
+type PublicEventCategory = {
+	id: string;
+	name: string;
+	color: string;
+};
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const event = await events.getEventBySlug(locals.db, params.slug);
@@ -13,8 +19,11 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		error(404, 'Este evento não está mais disponível');
 	}
 
-	const eventCategories = await events.getEventCategories(locals.db, event.id);
-	
+	const eventCategories = (await events.getEventCategories(
+		locals.db,
+		event.id
+	)) as unknown as PublicEventCategory[];
+
 	let isAttending = false;
 	if (locals.user) {
 		isAttending = await events.isUserAttending(locals.db, event.id, locals.user.id);
@@ -37,6 +46,12 @@ export const actions: Actions = {
 		const event = await events.getEventBySlug(locals.db, params.slug);
 		if (!event || !event.isActive) {
 			error(404, 'Evento não encontrado');
+		}
+
+		const isAlreadyAttending = await events.isUserAttending(locals.db, event.id, locals.user.id);
+
+		if (event.registrationsClosed && !isAlreadyAttending) {
+			return fail(403, { error: 'As inscrições deste evento estão encerradas.' });
 		}
 
 		await events.confirmAttendance(locals.db, event.id, locals.user.id);

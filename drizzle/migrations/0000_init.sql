@@ -60,6 +60,7 @@ CREATE TABLE `event` (
 	`end_time` integer NOT NULL,
 	`meet_link` text NOT NULL,
 	`expected_attendees` integer DEFAULT 0 NOT NULL,
+	`registrations_closed` integer DEFAULT false NOT NULL,
 	`created_by` text NOT NULL,
 	`created_at` integer NOT NULL,
 	`is_active` integer DEFAULT true NOT NULL,

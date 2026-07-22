@@ -15,6 +15,13 @@
       "when": 1764371132537,
       "tag": "0001_motionless_zeigeist",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784723685447,
+      "tag": "0002_add_registrations_closed",
+      "breakpoints": true
     }
   ]
 }

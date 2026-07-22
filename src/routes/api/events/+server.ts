@@ -17,7 +17,7 @@ export const GET: RequestHandler = async ({ request, url, locals }) => {
 
 	const token = authHeader.slice(7);
 	const apiKey = await apiKeys.validateApiKey(locals.db, token);
-	
+
 	if (!apiKey) {
 		return json(
 			{ error: 'Token de autorização inválido ou inativo' },
@@ -31,6 +31,7 @@ export const GET: RequestHandler = async ({ request, url, locals }) => {
 	const slug = url.searchParams.get('slug') || undefined;
 	const categoryId = url.searchParams.get('categoryId') || undefined;
 	const isActive = url.searchParams.get('isActive');
+	const registrationsClosed = url.searchParams.get('registrationsClosed');
 	const fromDate = url.searchParams.get('fromDate') || undefined;
 	const toDate = url.searchParams.get('toDate') || undefined;
 	const limit = parseInt(url.searchParams.get('limit') || '50');
@@ -40,7 +41,7 @@ export const GET: RequestHandler = async ({ request, url, locals }) => {
 	// Server runs in UTC, so we add 3 hours to get correct Brazil time
 	let parsedFromDate: Date | undefined;
 	let parsedToDate: Date | undefined;
-	
+
 	if (fromDate) {
 		if (fromDate.includes('T')) {
 			// Full ISO datetime - use as-is (already in UTC)
@@ -51,7 +52,7 @@ export const GET: RequestHandler = async ({ request, url, locals }) => {
 			parsedFromDate = new Date(Date.UTC(year, month - 1, day, 3, 0, 0));
 		}
 	}
-	
+
 	if (toDate) {
 		if (toDate.includes('T')) {
 			// Full ISO datetime - use as-is (already in UTC)
@@ -70,6 +71,8 @@ export const GET: RequestHandler = async ({ request, url, locals }) => {
 			slug,
 			categoryId,
 			isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
+			registrationsClosed:
+				registrationsClosed === 'true' ? true : registrationsClosed === 'false' ? false : undefined,
 			fromDate: parsedFromDate,
 			toDate: parsedToDate,
 			limit: Math.min(limit, 100),
@@ -104,7 +107,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	const token = authHeader.slice(7);
 	const apiKey = await apiKeys.validateApiKey(locals.db, token);
-	
+
 	if (!apiKey) {
 		return json(
 			{ error: 'Token de autorização inválido ou inativo' },
@@ -130,7 +133,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		);
 	}
 
-	const { name, description, dateTime, endTime, meetLink, expectedAttendees, categoryIds } = body as Record<string, unknown>;
+	const {
+		name,
+		description,
+		dateTime,
+		endTime,
+		meetLink,
+		expectedAttendees,
+		registrationsClosed,
+		categoryIds
+	} = body as Record<string, unknown>;
 
 	// Validate required fields
 	const errors: string[] = [];
@@ -185,6 +197,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		}
 	}
 
+	if (registrationsClosed !== undefined && typeof registrationsClosed !== 'boolean') {
+		errors.push('registrationsClosed deve ser booleano');
+	}
+
 	// Validate categoryIds if provided
 	const validCategoryIds: string[] = [];
 	if (categoryIds !== undefined && categoryIds !== null) {
@@ -226,7 +242,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			attendeesCount,
 			apiKey.createdBy, // O criador da API key é o criador do evento
 			validCategoryIds,
-			typeof description === 'string' ? description.trim() : undefined
+			typeof description === 'string' ? description.trim() : undefined,
+			typeof registrationsClosed === 'boolean' ? registrationsClosed : false
 		);
 
 		return json(

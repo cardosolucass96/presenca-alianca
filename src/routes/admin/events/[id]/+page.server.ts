@@ -42,6 +42,7 @@ export const actions: Actions = {
 		const endTime = formData.get('endTime');
 		const meetLink = formData.get('meetLink');
 		const expectedAttendees = formData.get('expectedAttendees');
+		const registrationsClosed = formData.get('registrationsClosed') === 'true';
 		const categoryIds = formData.getAll('categoryIds');
 		const description = formData.get('description');
 
@@ -91,7 +92,8 @@ export const actions: Actions = {
 					dateTime,
 					endTime: endDateTime,
 					meetLink,
-					expectedAttendees: expected
+					expectedAttendees: expected,
+					registrationsClosed
 				},
 				validCategoryIds
 			);

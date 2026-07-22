@@ -1,0 +1,1 @@
+ALTER TABLE `event` ADD `registrations_closed` integer DEFAULT false NOT NULL;

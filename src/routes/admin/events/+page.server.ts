@@ -35,6 +35,7 @@ export const actions: Actions = {
 		const endTime = formData.get('endTime');
 		const meetLink = formData.get('meetLink');
 		const expectedAttendees = formData.get('expectedAttendees');
+		const registrationsClosed = formData.get('registrationsClosed') === 'true';
 		const categoryIds = formData.getAll('categoryIds');
 		const description = formData.get('description');
 
@@ -85,7 +86,8 @@ export const actions: Actions = {
 				expected,
 				locals.user!.id,
 				validCategoryIds,
-				typeof description === 'string' ? description : undefined
+				typeof description === 'string' ? description : undefined,
+				registrationsClosed
 			);
 
 			return { success: true, slug: result.slug };
