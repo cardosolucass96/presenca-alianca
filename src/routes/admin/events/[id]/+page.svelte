@@ -10,8 +10,8 @@
 	let isEditing = $state(false);
 	let showReport = $state(false);
 	let showEnrollForm = $state(false);
-
 	// Enrollment search
+	let showCreateUserForm = $state(false);
 	let enrollSearch = $state('');
 	let selectedUserId = $state('');
 	let enrollDropdownOpen = $state(false);
@@ -38,6 +38,12 @@
 		selectedUserId = '';
 		enrollSearch = '';
 		enrollDropdownOpen = false;
+	}
+
+	function closeEnrollForm() {
+		showEnrollForm = false;
+		showCreateUserForm = false;
+		clearEnrollSelection();
 	}
 
 	function handleEnrollBlur() {
@@ -153,7 +159,13 @@
 	{/if}
 
 	{#if form?.success && form?.enrolled}
-		<Alert variant="success" message="Usuário inscrito com sucesso!" class="mb-6" />
+		<Alert
+			variant="success"
+			message={form.createdAndEnrolled
+				? 'Usuário cadastrado e inscrito com sucesso!'
+				: 'Usuário inscrito com sucesso!'}
+			class="mb-6"
+		/>
 	{/if}
 
 	{#if form?.success && form?.unenrolled}
@@ -481,83 +493,161 @@
 				</p>
 
 				{#if showEnrollForm}
-					<form
-						method="POST"
-						action="?/enroll"
-						use:enhance={() => {
-							return async ({ update }) => {
-								await update();
-								showEnrollForm = false;
-								clearEnrollSelection();
-							};
-						}}
-						class="space-y-4"
-					>
-						<input type="hidden" name="userId" value={selectedUserId} />
-						<div class="label">
-							<span>Selecionar Usuário</span>
-							<div class="relative">
-								<input
-									type="text"
-									class="input w-full"
-									placeholder="Buscar por nome, empresa ou email..."
-									bind:value={enrollSearch}
-									onfocus={() => enrollDropdownOpen = true}
-									onblur={handleEnrollBlur}
-									oninput={() => { selectedUserId = ''; enrollDropdownOpen = true; }}
-									autocomplete="off"
-								/>
-								{#if selectedUserId}
-									<button
-										type="button"
-										class="absolute right-2 top-1/2 -translate-y-1/2 text-surface-500 hover:text-surface-700"
-										onclick={clearEnrollSelection}
-									>
-										✕
-									</button>
-								{/if}
-								{#if enrollDropdownOpen && !selectedUserId}
-									<div class="absolute z-50 w-full mt-1 max-h-48 overflow-y-auto rounded-lg border border-surface-200-800 bg-surface-100-900 shadow-lg">
-										{#if filteredUsers.length === 0}
-											<div class="p-3 text-sm text-surface-500 text-center">Nenhum usuário encontrado</div>
-										{:else}
-											{#each filteredUsers as user}
-												<button
-													type="button"
-													class="w-full text-left px-3 py-2 text-sm hover:bg-surface-200-800 transition-colors"
-													onclick={() => selectUser(user)}
-												>
-													<span class="font-medium">{user.username}</span>
-													<span class="text-surface-500"> - {user.companyName}</span>
-													<span class="text-surface-400 text-xs block">{user.email}</span>
-												</button>
-											{/each}
-										{/if}
-									</div>
-								{/if}
-							</div>
-						</div>
+					{#if showCreateUserForm}
+						<form
+							method="POST"
+							action="?/createAndEnroll"
+							use:enhance={() => {
+								return async ({ result, update }) => {
+									await update({ invalidateAll: result.type === 'success' });
 
-						<div class="flex gap-2">
-							<button type="submit" class="btn preset-filled-primary-500 btn-sm" disabled={!selectedUserId}>
-								Inscrever
-							</button>
-							<button
-								type="button"
-								class="btn preset-outlined-surface-500 btn-sm"
-								onclick={() => showEnrollForm = false}
-							>
-								Cancelar
-							</button>
-						</div>
-					</form>
+									if (result.type === 'success') closeEnrollForm();
+								};
+							}}
+							class="space-y-4"
+						>
+							<div>
+								<h4 class="font-medium">Cadastrar e inscrever usuário</h4>
+								<p class="mt-1 text-xs text-surface-600-400">* Campos obrigatórios</p>
+							</div>
+
+							<div class="grid grid-cols-1 gap-4">
+								<label class="label">
+									<span>Nome *</span>
+									<input type="text" name="username" class="input" placeholder="Nome completo" required />
+								</label>
+
+								<label class="label">
+									<span>Empresa *</span>
+									<input type="text" name="companyName" class="input" placeholder="Nome da empresa" required />
+								</label>
+
+								<label class="label">
+									<span>Telefone (WhatsApp) *</span>
+									<input type="tel" name="phone" class="input" placeholder="(85) 99999-9999" required />
+								</label>
+
+								<label class="label">
+									<span>Email *</span>
+									<input type="email" name="email" class="input" placeholder="email@exemplo.com" required />
+								</label>
+
+								<label class="label">
+									<span>Cargo</span>
+									<select name="positionId" class="select">
+										<option value="">Sem cargo</option>
+										{#each data.products as product}
+											<option value={product.id}>{product.name}</option>
+										{/each}
+									</select>
+								</label>
+
+								<label class="label">
+									<span>Senha *</span>
+									<input type="password" name="password" class="input" placeholder="Mínimo 8 caracteres" minlength="8" required />
+								</label>
+
+								<label class="label">
+									<span>Confirmar senha *</span>
+									<input type="password" name="confirmPassword" class="input" placeholder="Repita a senha" required />
+								</label>
+							</div>
+
+							<div class="flex flex-wrap gap-2">
+								<button type="submit" class="btn btn-sm preset-filled-primary-500">Cadastrar e inscrever</button>
+								<button type="button" class="btn btn-sm preset-outlined-surface-500" onclick={() => (showCreateUserForm = false)}>
+									Voltar
+								</button>
+								<button type="button" class="btn btn-sm preset-outlined-surface-500" onclick={closeEnrollForm}>
+									Cancelar
+								</button>
+							</div>
+						</form>
+					{:else}
+						<form
+							method="POST"
+							action="?/enroll"
+							use:enhance={() => {
+								return async ({ result, update }) => {
+									await update({ invalidateAll: result.type === 'success' });
+
+									if (result.type === 'success') closeEnrollForm();
+								};
+							}}
+							class="space-y-4"
+						>
+							<input type="hidden" name="userId" value={selectedUserId} />
+							<div class="label">
+								<span>Selecionar usuário *</span>
+								<div class="relative">
+									<input
+										type="text"
+										class="input w-full"
+										placeholder="Buscar por nome, empresa ou email..."
+										bind:value={enrollSearch}
+										onfocus={() => (enrollDropdownOpen = true)}
+										onblur={handleEnrollBlur}
+										oninput={() => {
+											selectedUserId = '';
+											enrollDropdownOpen = true;
+										}}
+										autocomplete="off"
+									/>
+
+									{#if selectedUserId}
+										<button
+											type="button"
+											class="absolute right-2 top-1/2 -translate-y-1/2 text-surface-500 hover:text-surface-700"
+											onclick={clearEnrollSelection}
+											title="Limpar seleção"
+										>
+											x
+										</button>
+									{/if}
+
+									{#if enrollDropdownOpen && !selectedUserId}
+										<div class="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-surface-200-800 bg-surface-100-900 shadow-lg">
+											{#if filteredUsers.length === 0}
+												<div class="p-3 text-center text-sm text-surface-500">
+													Nenhum usuário encontrado
+												</div>
+											{:else}
+												{#each filteredUsers as user}
+													<button
+														type="button"
+														class="w-full px-3 py-2 text-left text-sm transition-colors hover:bg-surface-200-800"
+														onclick={() => selectUser(user)}
+													>
+														<span class="font-medium">{user.username}</span>
+														<span class="text-surface-500"> - {user.companyName}</span>
+														<span class="block text-xs text-surface-400">{user.email}</span>
+													</button>
+												{/each}
+											{/if}
+										</div>
+									{/if}
+								</div>
+							</div>
+
+							<div class="flex flex-wrap gap-2">
+								<button type="submit" class="btn btn-sm preset-filled-primary-500" disabled={!selectedUserId}>
+									Inscrever
+								</button>
+								<button type="button" class="btn btn-sm preset-outlined-primary-500" onclick={() => (showCreateUserForm = true)}>
+									Cadastrar novo usuário
+								</button>
+								<button type="button" class="btn btn-sm preset-outlined-surface-500" onclick={closeEnrollForm}>
+									Cancelar
+								</button>
+							</div>
+						</form>
+					{/if}
 				{:else}
 					<button
-						class="btn preset-filled-primary-500 w-full"
-						onclick={() => showEnrollForm = true}
-						disabled={data.availableUsers.length === 0}
+						class="btn w-full preset-filled-primary-500"
+						onclick={() => (showEnrollForm = true)}
 					>
-						{data.availableUsers.length === 0 ? 'Todos inscritos' : 'Inscrever Usuário'}
+						Inscrever Usuário
 					</button>
 				{/if}
 			</div>
